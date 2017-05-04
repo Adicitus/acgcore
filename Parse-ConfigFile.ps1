@@ -1,5 +1,17 @@
 ﻿<# [Strict]Parse-ConfigFile.ps1
     An attempt to recreate the Deploy job-file parser in a strict fail-fast manner.
+
+    Not quite correct RG for the parser:
+
+    File 	-> Lines
+    Lines 	-> Line, Line\nLines
+    Line 	-> Include, Section, Directive, Empty
+    Section -> \[[^\]]+\] 
+    Directive -> Name=Value
+    Name 	-> [a-zA-Z0-9]+
+    Value 	-> ".*",'.*'
+    Include -> #\s*include\s+(?<jobname>[a-zA-Z0-9]+)
+    Empty 	-> 
 #>
 
 function Parse-ConfigFile {
@@ -58,7 +70,7 @@ function Parse-ConfigFile {
         return
     }
 
-    $Item = Get-Item $Path
+    $Item = Get-Item $Path -Force # Without -Force, Get-Item will gnerate an error for hidden files.
 
     $conf = @{}
     if ($Config) { # Protect against NULL-values.
