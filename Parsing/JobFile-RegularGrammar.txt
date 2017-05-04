@@ -1,0 +1,11 @@
+Not quite correct:
+
+File 	-> Lines
+Lines 	-> Line, Line\nLines
+Line 	-> Include, Section, Directive, Empty
+Section -> \[[^\]]+\] 
+Directive -> Name=Value
+Name 	-> [a-zA-Z0-9]+
+Value 	-> ".*",'.*'
+Include -> #\s*include\s+(?<jobname>[a-zA-Z0-9]+)
+Empty 	-> 
