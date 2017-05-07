@@ -1,7 +1,7 @@
 ﻿# Retrieves any paths that lead to the given MSFT_Volume
 function Find-VolumePath {
     param(
-        [parameter(Position=1)]$Volume,
+        [parameter(Position=1, ValueFromPipeline=$true)]$Volume,
         [parameter()][Switch]$FirstOnly
     )
     $paths = @()
