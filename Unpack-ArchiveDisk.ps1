@@ -6,13 +6,9 @@
 # Unpacks a MOCSetup-style Archive disk (Cluster Pod).
 function Unpack-ArchiveDisk($File){
     
-    if ( !(Get-Module Hyper-V -ListAvailable )) {
-        ShoutOut "Unable to unpack, no 'Hyper-V' module available (unpacking relies on VHD cmdlets)!" Yellow
-        return
-    } 
-
     shoutOut "Unpacking '$($File.FullName)'..." Cyan
-    $vhd = Mount-DiskImage -ImagePath $file.fullname -PassThru | Get-DiskImage
+    Mount-DiskImage -ImagePath $file.fullname
+    $vhd = Get-DiskImage -ImagePath $File.FullName
 	$partitions = Get-Partition -DiskNumber $vhd.Number
     
     $partitions | % {
