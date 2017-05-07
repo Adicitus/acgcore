@@ -38,6 +38,7 @@ function Create-HiveVHD {
     $acl.SetAccessRule($ar)
     Set-Acl $path $acl
     Write-Host "Done!" -ForegroundColor Green
+
     Write-Host "Hiding hive.ini..." -NoNewline
     $hiveConfig | Set-ItemProperty -Name Attributes -Value ([System.IO.FileAttributes]::Hidden)
     Write-Host "Done!" -ForegroundColor Green

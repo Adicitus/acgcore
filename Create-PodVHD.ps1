@@ -85,7 +85,17 @@ function Create-PodVHD {
         }
     }
     
+    Write-host "Adding source system information (source.info)... " -NoNewline
     $path = Find-VolumePath $volume
+    $sysinfopath = "$path\source.info"
+
+    "Source system:" >> $sysinfopath
+    systeminfo | % { " $_" } >> $sysinfopath
+    Write-Host "Done!" -ForegroundColor Green
+
+    Write-host "Hiding source.info... "-NoNewline
+    Get-Item $sysinfopath | Set-ItemProperty -Name Attributes -Value ([System.IO.FileAttributes]::Hidden)
+    Write-Host "Done!" -ForegroundColor Green
 
     try {
         Write-Host "Setting access rights for the volume... " -NoNewline
