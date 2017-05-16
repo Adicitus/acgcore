@@ -6,7 +6,7 @@ function Create-HiveVHD {
         $PackageName,
         $Label=$PackageName,
         $DestinationDir="C:\",
-        $MaxSize=128GB,
+        $MaxSize=450GB,
         [Switch]$NonDeduplicated,
         [Switch]$Fixed
     )
