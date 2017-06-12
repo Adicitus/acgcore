@@ -1,5 +1,10 @@
-﻿
+﻿. "$PSScriptRoot\Run-Operation.ps1"
+
 function Unpack-RARFile($File, $Destination=$null, $UnRARPath="$PSScriptRoot\bin\RAR\UnRAR.exe"){
+    if ($File -is [String]) {
+        $File = Get-Item $File
+    }
+    
     shoutOut "Looking to unpack '$($File.FullName)'..." Cyan
     
     shoutOut "Checking for an archive comment..." Cyan -NoNewline
