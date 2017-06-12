@@ -5,14 +5,19 @@
 
 
 # Unpacks a MOCSetup-style Archive disk (Cluster Pod).
+# 
+# !NOTE! This function requires the Hyper-V VHD cmdlts to function.
+# It used rely on the DiskImage cmdlts, but since I have had access
+# control issues when treating the VHDs as DiskImages.
 function Unpack-ArchiveDisk {
     
     param([parameter(ValueFromPipeline=$true)][System.IO.FileInfo]$File)
 
     shoutOut "Unpacking '$($File.FullName)'..." Cyan
-    Mount-DiskImage -ImagePath $file.fullname
-    $vhd = Get-DiskImage -ImagePath $File.FullName
-	$partitions = Get-Partition -DiskNumber $vhd.Number
+    Mount-VHD $file.fullname
+    $vhd = Get-VHD $File.FullName
+    $disk = $vhd | Get-Disk
+	$partitions = $disk | Get-Partition
     
     $partitions | % {
         shoutOut "looking at partition #$($_.PartitionNumber)... " Cyan
@@ -45,5 +50,5 @@ function Unpack-ArchiveDisk {
             Write-Host "Done!" -ForegroundColor Green
         }
     }
-	$vhd | Dismount-DiskImage
+	$vhd | Dismount-VHD
 }
