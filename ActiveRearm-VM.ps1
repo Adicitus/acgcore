@@ -11,7 +11,7 @@ function ActiveRearm-VM {
 
     $tempSwitch = $false
     if (!$MaintenanceSwitch) {
-        $name = ("Maintenance{0:X5}" -f ([System.Random]::new()).Next(10000, 50000))
+        $name = ("Maintenance{0:X5}" -f (new-Object System.Random).Next(10000, 50000))
         shoutOut "Adding '$name' switch..." Cyan
         $MaintenanceSwitch = New-VMSwitch -Name $name -SwitchType Internal
         $usingTempSwitch = $true
