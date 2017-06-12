@@ -1,8 +1,4 @@
 ﻿
-param(
-    [parameter(mandatory=$false)][Switch]$Import
-)
-
 try { $_ = get-Command  shoutOut -ErrorAction Stop } catch { . "$PSScriptRoot\ShoutOut.ps1" }
 try { $_ = get-Variable RegexPatterns -Scope Script -ErrorAction Stop } catch { . "$PSScriptRoot\RegexPatterns.ps1" }
 
@@ -62,8 +58,4 @@ function Rebase-VHDFiles() {
         }
 
     }
-}
-
-if (!$import) {
-    Rebase-VHDFiles
 }
