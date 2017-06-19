@@ -1,6 +1,7 @@
 ﻿
 . "$PSScriptRoot\Run-Operation.ps1"
 
+# ! NOTE: This function needs to be carefully maintained, it should only return $true or $false. ! #
 function ActiveRearm-VM {
     param(
         $vm,
