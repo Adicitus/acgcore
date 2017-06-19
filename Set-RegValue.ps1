@@ -10,5 +10,12 @@ function Set-RegValue($key, $name, $value, $type=$null) {
             $type = "REG_SZ"
         }
     }
-    { reg add $key /v $name /t $type /d $value /f } | Run-Operation
+    switch($type) {
+        "REG_SZ" {
+            { reg add $key /f /v $name /t $type /d "$value" } | Run-Operation
+        }
+        default {
+            { reg add $key /f /v $name /t $type /d $value } | Run-Operation
+        }
+    }
 }
