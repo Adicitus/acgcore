@@ -7,7 +7,7 @@ if ( !(Get-variable "_ShoutOutSettings" -ErrorAction SilentlyContinue) -or $scri
     }
 }
 
-# First-things first: Logging function (is the realest)
+# First-things first: Logging function (is the realest, push the message and let the harddrive feel it.)
 function shoutOut {
 	param(
 		[parameter(Mandatory=$true,  position=1)] [Object]$Message,
@@ -28,6 +28,10 @@ function shoutOut {
     if (!$ForegroundColor) { $ForegroundColor = "White" }
     if (!$LogFile) { $LogFile = ".\setup.log" }
 	
+    if ($Message -isnot [String]) {
+        $message = $message | Out-String
+    }
+
 	if (!$Quiet) { Write-Host -ForegroundColor $ForegroundColor -Object $Message -NoNewline:$NoNewline }
     
     $parentCall = (Get-PSCallStack)[$ContextLevel]
