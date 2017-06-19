@@ -5,6 +5,7 @@
 .WISHLIST
     - Update so that that output is fed to shoutOut as it is generated rather than using the result output.
       The goal is to generate logging data continuously so that it's clear whether the script has hung or not.
+      [Done]
 .SYNOPSIS
     Helper function to execute commands (strings or blocks) with error-handling/reporting.
 .NOTES
@@ -30,7 +31,7 @@ function Run-Operation {
     $r = try {
         if ($Operation -is [scriptblock]) {    # Under certain circumstances the iex cmdlet will not allow
             $Operation = $Operation.ToString() # the evaluation of ScriptBlocks without an input. However it will evaluate strings
-        }                                      # just fine so be perform the transformation before evaluation.
+        }                                      # just fine so we perform the transformation before evaluation.
         iex $Operation *>&1 | % { shoutOut "`t| $_" $color -ContextLevel 3; $_ } # Invoke-Expression allows us to receive
                                                                                  # and handle output as it is generated,
                                                                                  # rather than wait for the operation to finish

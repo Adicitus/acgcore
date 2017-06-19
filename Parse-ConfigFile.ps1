@@ -7,9 +7,9 @@
     Lines 	-> Line, Line\nLines
     Line 	-> Include, Section, Directive, Empty
     Section -> \[[^\]]+\] 
-    Directive -> Name=Value
+    Directive -> Name(=Value)?
     Name 	-> [a-zA-Z0-9]+
-    Value 	-> ".*",'.*'
+    Value 	-> [^#]+|"[^"]*"|'[^']*'
     Include -> #\s*include\s+(?<jobname>[a-zA-Z0-9]+)
     Empty 	-> 
 #>

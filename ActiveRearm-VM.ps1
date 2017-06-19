@@ -9,6 +9,8 @@ function ActiveRearm-VM {
         $RearmScriptFile = "$PSScriptRoot\Snippets\Rearm.ps1"
     )
 
+    shoutOut ("Attempting Active Rearm: $($vm.VMName) ".PadRight(80,'=')) Magenta
+
     $tempSwitch = $false
     if (!$MaintenanceSwitch) {
         $name = ("Maintenance{0:X5}" -f (new-Object System.Random).Next(10000, 50000))
