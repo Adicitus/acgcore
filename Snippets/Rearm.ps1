@@ -25,7 +25,7 @@ $licenses = Get-WmiObject SoftwareLicensingProduct | ? {
 if ($licenses) {
     
     $licenses | % {
-        Write-Output "$($_.Description) ($($_.LicenseFamily)): $($_.LicenseStatus) ($($_.GracePeriodRemaining) minutes left, $($_.RemainingSkuReArmCount) SKU rearms left)"
+        Write-Output "Rearming: $($_.Description) ($($_.LicenseFamily)): $($_.LicenseStatus) ($($_.GracePeriodRemaining) minutes left, $($_.RemainingSkuReArmCount) SKU rearms left)"
                 
         try {
             if ($_.Licensefamily -match "Office|Eval") {
@@ -33,7 +33,7 @@ if ($licenses) {
             }
             sleep 10
         } catch {
-            $_
+            Write-Output $_
         }     
     }
 } else {
