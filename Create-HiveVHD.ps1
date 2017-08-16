@@ -10,12 +10,12 @@ function Create-HiveVHD {
         [Switch]$NonDeduplicated,
         [Switch]$Fixed
     )
-
+	
     $params = @{
-        PodPath="$DestinationDir$PackageName.hive.vhdx"
+        FileName="$PackageName.hive.vhdx"
         Label=$Label
-        DestinationDir=$DestinationDir
-        MAxSize=$MaxSize
+        DestinationDir="$DestinationDir\"
+        MaxSize=$MaxSize
     }
 
     if ($PSBoundParameters.ContainsKey("NonDeduplicated")) {

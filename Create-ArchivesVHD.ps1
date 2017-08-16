@@ -11,7 +11,7 @@ function Create-ArchivesVHD {
     )
 
     $params = @{
-        PodPath="$DestinationDir$PackageName.archives.vhdx"
+        FileName="$PackageName.archives.vhdx"
         Label=$Label
         DestinationDir=$DestinationDir
         MAxSize=$MaxSize

@@ -11,7 +11,7 @@ This is a basic function used by the Create-HiveVHD and Create-ArchivesVHD funct
 #>
 function Create-PodVHD {
     param(
-        $PodPath,
+        $FileName,
         $Label,
         $DestinationDir="C:\",
         $MaxSize=128GB,
@@ -28,7 +28,7 @@ function Create-PodVHD {
     }
 
     $params = @{
-        Path=$PodPath
+        Path="$DestinationDir$FileName"
         SizeBytes=$MaxSize
     }
 
