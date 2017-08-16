@@ -1,8 +1,15 @@
 ﻿. "$PSScriptRoot\Run-Operation.ps1"
 
-function Unpack-RARFile($File, $Destination=$null, $UnRARPath="$PSScriptRoot\bin\RAR\UnRAR.exe"){
-    if ($File -is [String]) {
-        $File = Get-Item $File
+function Unpack-RARFile{
+    param(
+		[parameter(Mandatory=$true, ValueFromPipeline=$true, ParameterSetName="FileInfo")][System.IO.FileInfo]$File,
+		[parameter(Mandatory=$true, ValueFromPipeline=$true, ParameterSetName="String")][String]$Path,
+		[parameter(Mandatory=$false)] $Destination=$null,
+		[parameter(Mandatory=$false)] $UnrarPath="$PSScriptRoot\bin\RAR\UnRAR.exe"
+	)
+	
+	if ($Path) {
+        $File = Get-Item $Path
     }
     
     shoutOut "Looking to unpack '$($File.FullName)'..." Cyan
