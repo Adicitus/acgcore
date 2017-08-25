@@ -2,10 +2,10 @@
 
 function Unpack-RARFile{
     param(
-		[parameter(Mandatory=$true, ValueFromPipeline=$true, ParameterSetName="FileInfo")][System.IO.FileInfo]$File,
-		[parameter(Mandatory=$true, ValueFromPipeline=$true, ParameterSetName="String")][String]$Path,
-		[parameter(Mandatory=$false)] $Destination=$null,
-		[parameter(Mandatory=$false)] $UnrarPath="$PSScriptRoot\bin\RAR\UnRAR.exe"
+		[parameter(Mandatory=$true, ValueFromPipeline=$true, ParameterSetName="FileInfo", position=1)][System.IO.FileInfo]$File,
+		[parameter(Mandatory=$true, ValueFromPipeline=$true, ParameterSetName="String", position=1)][String]$Path,
+		[parameter(Mandatory=$false, position=2)] $Destination=$null,
+		[parameter(Mandatory=$false, position=3)] $UnrarPath="$PSScriptRoot\bin\RAR\UnRAR.exe"
 	)
 	
 	if ($Path) {
@@ -19,7 +19,7 @@ function Unpack-RARFile{
     
     if (!$Destination) {
         $path = $comment -match '^\s*Path\s*=' -replace '^\s*Path\s*=\s*|\\$',''
-        $path = $path  -replace '^[a-z]:','C:' # MOCSetup compatibility, should probably be a settings.
+        $path = $path  -replace '^[a-z]:','C:' # MOCSetup compatibility, should probably be a setting.
 
         if  (!$path){
             shoutOut "Didn't find a 'Path' directive in the comment, falling back on 'C:\'" Yellow
