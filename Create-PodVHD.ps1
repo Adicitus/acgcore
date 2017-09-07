@@ -69,6 +69,8 @@ function Create-PodVHD {
 
     $idRegex = $id -replace "\\","\\"
     $w32_volume = gwmi "Win32_Volume where DeviceID='$idRegex'"
+    
+    Write-Host "($driveLetter)" -NoNewline
 
     $w32_volume.DriveLetter = "$driveLetter`:"
     $w32_volume.Put() | Out-Null
