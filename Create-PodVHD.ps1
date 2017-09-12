@@ -56,8 +56,8 @@ function Create-PodVHD {
 
     Write-Host "Assigning driveletter... " -NoNewline
     $dlcs = "DEFGHIJKLMNOPQRSTUVWXYZ"
-    Get-Volume | ? { $_.DriveLetter } | % {
-        $dlcs = $dlcs -replace $_.DriveLetter,""
+    Get-PSDrive | ? { $_.Name -match "^[A-Z]$" } | % {
+        $dlcs = $dlcs -replace $_.Name,""
     }
     $driveLetter = $dlcs[0]
 
