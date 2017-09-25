@@ -5,7 +5,7 @@ function Build-JobInventory(){
 	param(
 		[parameter(Mandatory=$true)]  [hashtable] $Config,
 		[parameter(Mandatory=$false)] [Switch] $Silent,
-        [parameter(Mandatory=$false)] [String] $DestinationDir
+        [parameter(Mandatory=$false)] [String] $DestinationDir="C:\setup"
 	)
 	
 	$defaultTargetDir = $DestinationDir

@@ -7,10 +7,11 @@
     Lines 	-> Line, Line\nLines
     Line 	-> Include, Section, Directive, Empty
     Section -> \[[^\]]+\] 
-    Directive -> Name(=Value)?
-    Name 	-> [a-zA-Z0-9]+
+    Directive -> \s*Name\s*(=\s*Value)?
+    Name 	-> [^\s=#]+
     Value 	-> [^#]+|"[^"]*"|'[^']*'
-    Include -> #\s*include\s+(?<jobname>[a-zA-Z0-9]+)
+    Include -> #\include\s+(?<jobname>[a-zA-Z0-9]+)
+    Comment -> \s*#.*
     Empty 	-> 
 #>
 
@@ -86,7 +87,7 @@ function Parse-ConfigFile {
     $regex.Comment = "#(?<comment>.*)"
     $regex.Include = "^#include\s+(?<include>[^\s#]+)\s*($($regex.Comment))?$"
     $regex.Heading = "^\s*\[(?<heading>[^\]]+)\]\s*($($regex.Comment))?$"
-    $regex.Setting = "^\s*(?<name>[^=#]+)\s*(=(?<value>[^#]+|`"[^`"]*`"|'[^']*'))?\s*($($regex.Comment))?$"
+    $regex.Setting = "^\s*(?<name>[^\s=#]+)\s*(=\s*(?<value>[^#]+|`"[^`"]*`"|'[^']*'))?\s*($($regex.Comment))?$"
     $regex.Entry   = "^\s*(?<entry>.+)\s*"
     $regex.Empty   = "^\s*($($regex.Comment))?$"  
 
@@ -129,7 +130,7 @@ function Parse-ConfigFile {
                 if (!$CurrentSection) {
                     . $handleError -Message "<OrphanSetting>Ecountered a setting before any headings were declared (line $linenum in '$Path'): '$line'"
                 }
-                
+
                 if ($Verbose) { Write-Host -ForegroundColor Green "Setting: '$line'"; }
                 if ($conf[$CurrentSection][$Matches.Name]) {
                     if ($conf[$CurrentSection][$Matches.Name] -is [Array]) {
@@ -140,7 +141,8 @@ function Parse-ConfigFile {
                         $conf[$CurrentSection][$Matches.Name] = @( $conf[$CurrentSection][$Matches.Name], $Matches.Value )
                     }
                 } else {
-                    $conf[$CurrentSection][$Matches.Name] = $Matches.Value
+                    $v = if ($Matches.value -eq $null) { "" } else { $Matches.value } # Convertion to match the behaviour of Read-Conf
+                    $conf[$CurrentSection][$Matches.Name] = $v
                 }
                 break;
             }
