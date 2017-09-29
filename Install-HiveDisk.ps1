@@ -50,10 +50,6 @@
             If you specify both a DriveLetter and a MountPoint directive, then the MountPoint should take precedence
             and the drive letter be removed.
             
-            [!Warning!][20170419] Multiple MountPoint declarations will produce unpredictable results.
-            
-            [!Warning!][20170419] Using a MountPoint disables the hive.ini functionality, at the moment.
-               Correcting this is a priority.
 #>
 function Install-HiveDisk{
     param(

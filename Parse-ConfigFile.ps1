@@ -65,7 +65,7 @@ function Parse-ConfigFile {
     $Verbose = if (($Verbose -or $Loud) -and !$Silent) { $true } else { $false }
 	
     if($Path -and (Test-Path $Path -PathType Leaf)) {
-        $lines = Get-Content $Path
+        $lines = Get-Content $Path -Encoding UTF8
     } else {
         . $handleError -Message "<InvalidPath>The given path doesn't lead to an existing file: '$Path'"
         return
