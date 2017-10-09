@@ -9,7 +9,10 @@ function Rebase-VHDFiles() {
         [parameter(Mandatory=$false)] [string[]] $VHDFolder = 'C:\Program Files\Microsoft Learning'
     )
 
-    $vhds = $VHDFolder | ls -Recurse | ? { $_ -match '.*\.(a)?vhd(x)?' } | % { Get-VHD -Path $_.FullName }
+    $vhdFiles = $VHDFolder | ls -Recurse | ? { $_ -match '.*\.(a)?vhd(x)?' }
+    shoutOut "Found the following VHDs:"
+    $vhdFiles | % FullName | % { shoutOut " | $_" }
+    $vhds = $vhdFiles | % { Get-VHD -Path $_.FullName }
 
     $vhdMap = @{ }
 
