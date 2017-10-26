@@ -7,8 +7,12 @@ $rearmFiles | % {
     $rf = $r -join "`n"
     if ($rf -match "REMAINING GRACE: [0-6] days") {
         Write-Output "Rearming using '$_'..."
-        cscript $_ /rearm
-        Write-Output "Done!"
+        try {
+            cscript $_ /rearm
+            Write-Output "Done!"
+        } catch {
+            $_ | Out-String | Write-Output
+        }
     } else {
         Write-Output "No Need to rearm!"
     }
@@ -33,7 +37,7 @@ if ($licenses) {
             }
             sleep 10
         } catch {
-            Write-Output $_
+            $_ | Out-Strin | Write-Output 
         }     
     }
 } else {
