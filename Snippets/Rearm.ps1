@@ -8,7 +8,7 @@ $rearmFiles | % {
     if ($rf -match "REMAINING GRACE: [0-6] days") {
         Write-Output "Rearming using '$_'..."
         try {
-            cscript $_ /rearm
+            cscript $_ /rearm | Out-String | Write-Output
             Write-Output "Done!"
         } catch {
             $_ | Out-String | Write-Output
@@ -33,11 +33,11 @@ if ($licenses) {
                 
         try {
             if ($_.Licensefamily -match "Office|Eval") {
-                $_.ReArmSku()
+                $_.ReArmSku() | Out-String | Write-Output
             }
             sleep 10
         } catch {
-            $_ | Out-Strin | Write-Output 
+            $_ | Out-String | Write-Output 
         }     
     }
 } else {
