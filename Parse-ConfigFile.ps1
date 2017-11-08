@@ -24,7 +24,9 @@ function Parse-ConfigFile {
         [Parameter(Mandatory=$false)] [Switch] $Silent,                      # Supresses all commandline-output from the parser.
         [parameter(Mandatory=$false)] [Hashtable] $MetaData,                 # Hashtable used to capture MetaData while parsing.
                                                                              # This will record Includes as '$MetaData.includes'.
-        [parameter(Mandatory=$false)] [Switch] $Loud                         # Equivalent of $Verbose
+        [parameter(Mandatory=$false)] [Switch] $Loud,                        # Equivalent of $Verbose
+        [parameter(Mandatory=$false)] [array]
+        $duplicatesAllowed = @("Operation","Pre","Post")                     # Declarations for which duplicate values are allowed.
     )
 	
     # Error-handling specified here for reusability.
@@ -84,10 +86,10 @@ function Parse-ConfigFile {
     }
     
     $regex = @{ }
-    $regex.Comment = "#(?<comment>.*)"
+    $regex.Comment = "(?<![\\])#(?<comment>.*)"
     $regex.Include = "^#include\s+(?<include>[^\s#]+)\s*($($regex.Comment))?$"
     $regex.Heading = "^\s*\[(?<heading>[^\]]+)\]\s*($($regex.Comment))?$"
-    $regex.Setting = "^\s*(?<name>[^\s=#]+)\s*(=\s*(?<value>[^#]+|`"[^`"]*`"|'[^']*'))?\s*($($regex.Comment))?$"
+    $regex.Setting = "^\s*(?<name>[^\s=#]+)\s*(=\s*(?<value>([^#]|\\#)+|`"[^`"]*`"|'[^']*'))?\s*($($regex.Comment))?$"
     $regex.Entry   = "^\s*(?<entry>.+)\s*"
     $regex.Empty   = "^\s*($($regex.Comment))?$"  
 
@@ -132,16 +134,17 @@ function Parse-ConfigFile {
                 }
 
                 if ($Verbose) { Write-Host -ForegroundColor Green "Setting: '$line'"; }
+                $value = $Matches.Value -replace "\\#","#" # Strip escape character from literal '#'s
                 if ($conf[$CurrentSection][$Matches.Name]) {
                     if ($conf[$CurrentSection][$Matches.Name] -is [Array]) {
-                        if (-not $conf[$CurrentSection][$Matches.Name].Contains($Matches.Value)) {
-                            $conf[$CurrentSection][$Matches.Name] += $Matches.Value
+                        if ( ($Matches.Name -in $duplicatesAllowed) -or (-not $conf[$CurrentSection][$Matches.Name].Contains($value)) ) {
+                            $conf[$CurrentSection][$Matches.Name] += $value
                         }
                     } else {
-                        $conf[$CurrentSection][$Matches.Name] = @( $conf[$CurrentSection][$Matches.Name], $Matches.Value )
+                        $conf[$CurrentSection][$Matches.Name] = @( $conf[$CurrentSection][$Matches.Name], $value )
                     }
                 } else {
-                    $v = if ($Matches.value -eq $null) { "" } else { $Matches.value } # Convertion to match the behaviour of Read-Conf
+                    $v = if ($value -eq $null) { "" } else { $value } # Convertion to match the behaviour of Read-Conf
                     $conf[$CurrentSection][$Matches.Name] = $v
                 }
                 break;
