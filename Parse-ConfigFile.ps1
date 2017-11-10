@@ -111,7 +111,7 @@ function Parse-ConfigFile {
                     if ($_.Exception -like "<InvalidPath>*") {
                         . $handleError -Message $_
                     } else {
-                        . $handleError "An unknown exception occurred while parsing the include file at '$($Item.DirectoryName)\$($Matches.include).ini': $_"
+                        . $handleError "An unknown exception occurred while parsing the include file at '$($Item.DirectoryName)\$($Matches.include).ini' (in root file '$Path'): $_"
                     }
                 }
 
