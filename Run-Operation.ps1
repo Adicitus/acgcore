@@ -32,10 +32,10 @@ function Run-Operation {
         if ($Operation -is [scriptblock]) {    # Under certain circumstances the iex cmdlet will not allow
             $Operation = $Operation.ToString() # the evaluation of ScriptBlocks without an input. However it will evaluate strings
         }                                      # just fine so we perform the transformation before evaluation.
-        iex $Operation *>&1 | % { shoutOut "`t| $_" $color -ContextLevel 3; $_ } # Invoke-Expression allows us to receive
-                                                                                 # and handle output as it is generated,
-                                                                                 # rather than wait for the operation to finish
-                                                                                 # as opposed to <[scriptblock]>.invoke().
+        Invoke-Expression $Operation | % { shoutOut "`t| $_" $color -ContextLevel 3; $_ } # Invoke-Expression allows us to receive
+                                                                            # and handle output as it is generated,
+                                                                            # rather than wait for the operation to finish
+                                                                            # as opposed to <[scriptblock]>.invoke().
     } catch {
         $color = "Red"
         $_ | % { shoutOut "`t| $_" $color -ContextLevel 3 }
