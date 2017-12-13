@@ -26,29 +26,11 @@ function Parse-ConfigFile {
                                                                              # This will record Includes as '$MetaData.includes'.
         [parameter(Mandatory=$false)] [Switch] $Loud,                        # Equivalent of $Verbose
         [parameter(Mandatory=$false)] [array]
-        $duplicatesAllowed = @("Operation","Pre","Post")                     # Declarations for which duplicate values are allowed.
+        $duplicatesAllowed = @("Operation","Pre","Post"),                    # Declarations for which duplicate values are allowed.
+        [parameter(Mandatory=$false)] [string]$IncludeRootPath               # The root directory used to resolve includes.
     )
 	
     # Error-handling specified here for reusability.
-    function Handle-Error(){
-        param(
-            [parameter(Mandatory=$true)]  [String]    $Message,
-            [parameter(Mandatory=$false)] [Hashtable] $MetaData,
-            [parameter(Mandatory=$false)] [Switch] $NotStrict,
-            [parameter(Mandatory=$false)] [Switch] $Silent
-        )
-
-        if ($MetaData) {
-            $MetaData.Errors = $Message
-        }
-        
-        if ($NotStrict) {
-            if (!$Silent) { write-host $Message -ForegroundColor Red }
-        } else {
-            throw $Message
-        }
-    }
-
     $handleError = {
         param(
             [parameter(Mandatory=$true)] [String] $Message
@@ -73,7 +55,11 @@ function Parse-ConfigFile {
         return
     }
 
-    $Item = Get-Item $Path -Force # Without -Force, Get-Item will gnerate an error for hidden files.
+    $Item = Get-Item $Path -Force # Without -Force, Get-Item will generate an error for hidden files.
+
+    if (!$PSBoundParameters.ContainsKey("IncludeRootPath")) {
+        $IncludeRootPath = $Item.DirectoryName
+    }
 
     $conf = @{}
     if ($Config) { # Protect against NULL-values.
@@ -101,22 +87,42 @@ function Parse-ConfigFile {
             $regex.Include {
                 if ($Verbose) {
                     write-host -ForegroundColor Green "Include: '$line'";
-                    Write-Host ("-"*7+"$($Matches.include):"+"-"*(72-$Matches.include.Length))
+                    Write-Host "------[Start:$($Matches.include)]".PadRight(80, "-")
                 }
                 if ($NoInclude) { continue }
                 if ($MetaData) { $MetaData.includes += $Matches.include }
+                
+                $includePath = $Matches.include
+
                 try {
-                    Parse-ConfigFile -Path "$($Item.DirectoryName)\$($Matches.include).ini" -Config $conf -Verbose:($Verbose) -NotStrict:($NotStrict) -Silent:($Silent) -MetaData $MetaData | Out-Null
+                    
+                    $parseArgs = @{
+                        Config=$conf;
+                        MetaData=$MetaData;
+                        IncludeRootPath=$IncludeRootPath;
+                    }
+
+                    if ($includePath -match "^[/\\]") {
+                        $parseArgs.Path = "$IncludeRootPath${includePath}.ini" # Absolute path.
+                    } else {
+                        $parseArgs.Path = "$($Item.DirectoryName)\${includePath}.ini"; # Relative path.
+                    }
+
+                    if ($PSBoundParameters.ContainsKey("Verbose")) { $parseArgs.Verbose = $Verbose }
+                    if ($PSBoundParameters.ContainsKey("NotStrict")) { $parseArgs.NotStrict = $NotStrict }
+                    if ($PSBoundParameters.ContainsKey("Silent"))  { $parseArgs.Silent = $Silent }
+
+                    Parse-ConfigFile @parseArgs | Out-Null
                 } catch {
                     if ($_.Exception -like "<InvalidPath>*") {
                         . $handleError -Message $_
                     } else {
-                        . $handleError "An unknown exception occurred while parsing the include file at '$($Item.DirectoryName)\$($Matches.include).ini' (in root file '$Path'): $_"
+                        . $handleError "An unknown exception occurred while parsing the include file at '$($Item.DirectoryName)\${includePath}.ini' (in root file '$Path'): $_"
                     }
                 }
 
                 if ($Verbose) {
-                    Write-Host ("-"*6+"`\$($Matches.include)"+"-"*(73-$Matches.Include.Length))
+                    Write-Host "------[End:$includePath]".PadRight(80, "-")
                 }
                 break;
             }
