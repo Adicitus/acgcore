@@ -17,13 +17,33 @@
 
 function Parse-ConfigFile {
     param (
-        [parameter(Mandatory=$true, Position=1)] [String]$Path,              # Name of the job-file to parse (including extension)
-        [parameter(Mandatory=$false, Position=2)] [Hashtable]$Config = @{},  # Pre-existing configuration, if given we'll simply add to this one.
-        [parameter(Mandatory=$false)] [Switch] $NoInclude,                   # Tells the parser to skip any include statements
-        [Parameter(Mandatory=$false)] [Switch] $NotStrict,                   # Tells the parser to not generate any exceptions.
-        [Parameter(Mandatory=$false)] [Switch] $Silent,                      # Supresses all commandline-output from the parser.
-        [parameter(Mandatory=$false)] [Hashtable] $MetaData,                 # Hashtable used to capture MetaData while parsing.
-                                                                             # This will record Includes as '$MetaData.includes'.
+        [parameter(
+            Mandatory=$true,
+            Position=1,
+            HelpMessage="Path to the file."
+        )] [String] $Path,              # Name of the job-file to parse (including extension)
+        [parameter(
+            Mandatory=$false,
+            Position=2,
+            HelpMessage="Pre-populated configuration tahstable. If provided, any options read from the given file will be appended."
+        )] [Hashtable] $Config = @{},  # Pre-existing configuration, if given we'll simply add to this one.
+        [parameter(
+            Mandatory=$false,
+            HelpMessage="Tells the parser to skip include stetements."
+        )] [Switch] $NoInclude,                   # Tells the parser to skip any include statements
+        [Parameter(
+            Mandatory=$false,
+            HelpMessage="Tells the parser not to throw an exception on parsing errors."
+        )] [Switch] $NotStrict,                   # Tells the parser to not generate any exceptions.
+        [Parameter(
+            Mandatory=$false,
+            HelpMessage="Suppresses all command-line output from the parser."
+        )] [Switch] $Silent,                      # Supresses all commandline-output from the parser.
+        [parameter(
+            Mandatory=$false,
+            HelpMessage='Hashtable used to record MetaData. Includes will be recorded in $MetaData.Includes.'
+        )] [Hashtable] $MetaData,                 # Hashtable used to capture MetaData while parsing.
+                                                  # This will record Includes as '$MetaData.includes'.
         [parameter(Mandatory=$false)] [Switch] $Loud,                        # Equivalent of $Verbose
         [parameter(Mandatory=$false)] [array]
         $duplicatesAllowed = @("Operation","Pre","Post")                     # Declarations for which duplicate values are allowed.
