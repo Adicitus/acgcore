@@ -10,11 +10,61 @@
     Directive -> \s*Name\s*(=\s*Value)?
     Name 	-> [^\s=#]+
     Value 	-> [^#]+|"[^"]*"|'[^']*'
-    Include -> #\include\s+(?<jobname>[a-zA-Z0-9]+)
+    Include -> #include\s+(?<jobname>[a-zA-Z0-9]+)
     Comment -> \s*#.*
     Empty 	-> 
 #>
+<#
+.SYNOPSIS
+Parsing function used for ACGroup-style .ini configuration files.
 
+.DESCRIPTION
+Long description
+
+.PARAMETER Path
+The path to the configuration file.
+
+.PARAMETER Config
+Pre-populated configuration hashtable. If provided, the parser will add new settings to the hashtable.
+The default behavior is to generate a new hashtable.
+
+.PARAMETER NoInclude
+Causes the parser skip include statements.
+
+.PARAMETER NotStrict
+Stops the parser from throwing an exceptions when errors are encountered.
+
+.PARAMETER Silent
+Stops the parser from outputting anything to the console.
+
+.PARAMETER MetaData
+Hashtable used to record MetaData while parsing.
+Presently only records Includes and errors.
+
+.PARAMETER Loud
+Causes the parser to output extra information to the console.
+
+.PARAMETER duplicatesAllowed
+Names of settings for which duplicate values are allowed.
+
+.PARAMETER IncludeRootPath
+The root path to use when resolving includes. If this value isn't provided
+then it will default to the directory part of $Path.
+
+Include-paths that start with '\' or '/' will use this value when resolving
+where to look for the included file.
+
+Paths that do not start with either '\' or '/' will use the directory of the
+of the file currently being processed.
+
+All included files will be parsed using the same IncludeRootPath, 
+
+.EXAMPLE
+An example
+
+.NOTES
+General notes
+#>
 function Parse-ConfigFile {
     param (
         [parameter(
@@ -25,7 +75,7 @@ function Parse-ConfigFile {
         [parameter(
             Mandatory=$false,
             Position=2,
-            HelpMessage="Pre-populated configuration tahstable. If provided, any options read from the given file will be appended."
+            HelpMessage="Pre-populated configuration hashtable. If provided, any options read from the given file will be appended."
         )] [Hashtable] $Config = @{},  # Pre-existing configuration, if given we'll simply add to this one.
         [parameter(
             Mandatory=$false,
@@ -44,10 +94,19 @@ function Parse-ConfigFile {
             HelpMessage='Hashtable used to record MetaData. Includes will be recorded in $MetaData.Includes.'
         )] [Hashtable] $MetaData,                 # Hashtable used to capture MetaData while parsing.
                                                   # This will record Includes as '$MetaData.includes'.
-        [parameter(Mandatory=$false)] [Switch] $Loud,                        # Equivalent of $Verbose
-        [parameter(Mandatory=$false)] [array]
+        [parameter(
+            Mandatory=$false,
+            HelpMessage="Causes the Parser to output extra information to the console."
+        )] [Switch] $Loud,                        # Equivalent of $Verbose
+        [parameter(
+            Mandatory=$false,
+            HelpMessage="Array of settings for which values can be duplicated."
+        )] [array]
         $duplicatesAllowed = @("Operation","Pre","Post"),                    # Declarations for which duplicate values are allowed.
-        [parameter(Mandatory=$false)] [string]$IncludeRootPath               # The root directory used to resolve includes.
+        [parameter(
+            Mandatory=$false,
+            HelpMessage="The root directory used to resolve includes. Defaults to the directory of the config file."
+        )] [string]$IncludeRootPath               # The root directory used to resolve includes.
     )
 	
     # Error-handling specified here for reusability.
