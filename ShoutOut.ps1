@@ -39,6 +39,11 @@ function shoutOut {
             $message = $message | Out-String
         }
 
+        $logDir = Split-Path $LogFile -Parent
+        if (!(Test-Path $logDir)) {
+            New-Item $logDir -ItemType Directory
+        }
+
 	    if (!$Quiet) { Write-Host -ForegroundColor $ForegroundColor -Object $Message -NoNewline:$NoNewline }
         
         $parentContext = if ($LogContext) {
