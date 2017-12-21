@@ -53,9 +53,7 @@ function Render-Template{
     )
 
     $values.GetEnumerator() |% {
-        if (!(Get-Variable($_.Name) -ea SilentlyContinue)) {
             New-Variable $_.Name $_.Value
-        }
     }
 
     $template = [System.IO.File]::ReadAllText($templatePath)
