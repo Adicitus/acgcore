@@ -74,6 +74,6 @@ function shoutOut {
         } else {
             "[context logging disabled]"
         }
-	    "$($env:COMPUTERNAME)|$parentContext@$(Get-Date -Format 'MMdd-HH:mm.ss'): $Message" >> $LogFile
+	    "$($env:COMPUTERNAME)|$parentContext@$(Get-Date -Format 'MMdd-HH:mm.ss'): $Message" | Out-File $LogFile -Encoding utf8 -Append
     }
 }
