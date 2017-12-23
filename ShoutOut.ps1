@@ -39,6 +39,11 @@ function shoutOut {
             $message = $message | Out-String
         }
 
+        $logDir = Split-Path $LogFile -Parent
+        if (!(Test-Path $logDir)) {
+            New-Item $logDir -ItemType Directory
+        }
+
 	    if (!$Quiet) { Write-Host -ForegroundColor $ForegroundColor -Object $Message -NoNewline:$NoNewline }
         
         $parentContext = if ($LogContext) {
@@ -69,6 +74,6 @@ function shoutOut {
         } else {
             "[context logging disabled]"
         }
-	    "$($env:COMPUTERNAME)|$parentContext@$(Get-Date -Format 'MMdd-HH:mm.ss'): $Message" >> $LogFile
+	    "$($env:COMPUTERNAME)|$parentContext@$(Get-Date -Format 'MMdd-HH:mm.ss'): $Message" | Out-File $LogFile -Encoding utf8 -Append
     }
 }
