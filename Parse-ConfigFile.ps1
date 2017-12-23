@@ -94,6 +94,7 @@ function Parse-ConfigFile {
             HelpMessage='Hashtable used to record MetaData. Includes will be recorded in $MetaData.Includes.'
         )] [Hashtable] $MetaData,                 # Hashtable used to capture MetaData while parsing.
                                                   # This will record Includes as '$MetaData.includes'.
+        [Parameter(Mandatory=$false)][Hashtable] $Cache,
         [parameter(
             Mandatory=$false,
             HelpMessage="Causes the Parser to output extra information to the console."
@@ -190,8 +191,21 @@ function Parse-ConfigFile {
                     if ($PSBoundParameters.ContainsKey("Verbose")) { $parseArgs.Verbose = $Verbose }
                     if ($PSBoundParameters.ContainsKey("NotStrict")) { $parseArgs.NotStrict = $NotStrict }
                     if ($PSBoundParameters.ContainsKey("Silent"))  { $parseArgs.Silent = $Silent }
-
-                    Parse-ConfigFile @parseArgs | Out-Null
+                    
+                    if ($Cache) {
+                        $parseArgs.Remove("Config")
+                        if ($Cache.ContainsKey($parseArgs.Path)) {
+                            if ($Loud) { Write-Host "Found include file in the cache!" -ForegroundColor Green }
+                            $ic = $Cache[$parseArgs.Path]
+                        } else {
+                            if ($Loud) { Write-Host "include file not found in the cache, parsing file..." -ForegroundColor Yellow }
+                            $ic = Parse-ConfigFile @parseArgs
+                            $Cache[$parseArgs.Path] = $ic
+                        }
+                        $conf = Merge-Configs $conf $ic
+                    } else {
+                        Parse-ConfigFile @parseArgs | Out-Null
+                    }
                 } catch {
                     if ($_.Exception -like "<InvalidPath>*") {
                         . $handleError -Message $_
@@ -245,13 +259,19 @@ function Parse-ConfigFile {
         }
     }
 
+    if ($Cache) {
+        $Cache[$Path] = $conf
+    }
+
     return $conf
 }
 
 function Merge-Configs {
     param(
-        [ValidateNotNull][hashtable]$C1,
-        [ValidateNotNull][hashtable]$C2
+        [Paramater(Mandatory=$true, HelpMessage="Configuration 1, values from this object will appear first in the cases where values overlap.")]
+        [ValidateNotNull()][hashtable]$C1,
+        [Paramater(Mandatory=$true, HelpMessage="Configuration 1, values from this object will appear last in the cases where values overlap.")]
+        [ValidateNotNull()][hashtable]$C2
     )
 
     $NC = @{}
@@ -263,7 +283,7 @@ function Merge-Configs {
             $NC[$s][$_.Name] = $C1[$s][$_.Name]
         }
     }
-    $C2.Keys | ? { $_ -ne $null -and ($C2[$_] -is [hashtable]) } % {
+    $C2.Keys | ? { $_ -ne $null -and ($C2[$_] -is [hashtable]) } | % {
         $s = $_
         if (!$NC.ContainsKey($s)) {
             $NC[$s] = @{}
