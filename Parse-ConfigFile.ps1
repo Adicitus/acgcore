@@ -247,3 +247,53 @@ function Parse-ConfigFile {
 
     return $conf
 }
+
+function Merge-Configs {
+    param(
+        [ValidateNotNull][hashtable]$C1,
+        [ValidateNotNull][hashtable]$C2
+    )
+
+    $NC = @{}
+
+    $C1.Keys | ? { $_ -and ($C1[$_] -is [hashtable]) } | % {
+        $s = $_
+        $NC[$s] = @{}
+        $C1[$s].GetEnumerator() | % {
+            $NC[$s][$_.Name] = $C1[$s][$_.Name]
+        }
+    }
+    $C2.Keys | ? { $_ -ne $null -and ($C2[$_] -is [hashtable]) } % {
+        $s = $_
+        if (!$NC.ContainsKey($s)) {
+            $NC[$s] = @{}
+        }
+        $C2[$s].GetEnumerator() | % {
+            $n = $_.Name
+            $v = $_.Value
+            
+            if (!$NC[$s].ContainsKey($n)) {
+                $NC[$s][$n] = $v
+                return
+            }
+
+            if ($NC[$s][$n] -is [array]) {
+                if ($v -isnot [array]) {
+                    $NC[$s][$n] += $v
+                    return 
+                }
+
+                $NC[$s][$n] = $NC[$s][$n] + $v | ? { $_ -ne $null }
+            } else {
+                if ($v -isnot [array]) {
+                    $NC[$s][$n] = @($NC[$s][$n], $v)
+                    return
+                }
+
+                $NC[$s][$n] = @($NC[$s][$n]) + $v
+            }
+        }
+    }
+    
+    $NC
+}
