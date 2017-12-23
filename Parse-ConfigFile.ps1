@@ -202,7 +202,7 @@ function Parse-ConfigFile {
                             $ic = Parse-ConfigFile @parseArgs
                             $Cache[$parseArgs.Path] = $ic
                         }
-                        $conf = Merge-Configs $conf $ic
+                        $conf = Merge-Configs $conf $ic -duplicatesAllowed $duplicatesAllowed
                     } else {
                         Parse-ConfigFile @parseArgs | Out-Null
                     }
@@ -268,11 +268,43 @@ function Parse-ConfigFile {
 
 function Merge-Configs {
     param(
-        [Paramater(Mandatory=$true, HelpMessage="Configuration 1, values from this object will appear first in the cases where values overlap.")]
+        [Parameter(Mandatory=$true,  HelpMessage="Configuration 1, values from this object will appear first in the cases where values overlap.")]
         [ValidateNotNull()][hashtable]$C1,
-        [Paramater(Mandatory=$true, HelpMessage="Configuration 1, values from this object will appear last in the cases where values overlap.")]
-        [ValidateNotNull()][hashtable]$C2
+        [Parameter(Mandatory=$true,  HelpMessage="Configuration 1, values from this object will appear last in the cases where values overlap.")]
+        [ValidateNotNull()][hashtable]$C2,
+        [parameter(Mandatory=$false, HelpMessage="Array of settings for which values can be duplicated.")]
+        [array] $duplicatesAllowed = @("Operation","Pre","Post")
     )
+
+    $combineValues = {
+        param($n, $v1, $v2)
+
+        $da = $n -in $duplicatesAllowed
+
+        if ($v1 -is [array]) {
+            if ($v2 -isnot [array]) {
+                if (!$da -and ($v2 -in $v1)) {
+                    return $v1
+                }
+                return $v1 + $v2
+            } else {
+                $v = $v1
+                $v2 | ? { $da -or $_ -notin $v } | % { $v += $_ }
+                return $v
+            }
+        } else {
+            if ($v2 -isnot [Array] ) {
+                if (!$da -and $v1 -eq $v2) {
+                    return $v1
+                }
+                return @($v1, $v2)
+            } else {
+                $v = @($v1)
+                $v2 | ? { $da -or $_ -notin $v } | % { $v += $_ }
+                return $v
+            }
+        } 
+    }
 
     $NC = @{}
 
@@ -291,29 +323,15 @@ function Merge-Configs {
         $C2[$s].GetEnumerator() | % {
             $n = $_.Name
             $v = $_.Value
-            
+
             if (!$NC[$s].ContainsKey($n)) {
                 $NC[$s][$n] = $v
                 return
             }
 
-            if ($NC[$s][$n] -is [array]) {
-                if ($v -isnot [array]) {
-                    $NC[$s][$n] += $v
-                    return 
-                }
-
-                $NC[$s][$n] = $NC[$s][$n] + $v | ? { $_ -ne $null }
-            } else {
-                if ($v -isnot [array]) {
-                    $NC[$s][$n] = @($NC[$s][$n], $v)
-                    return
-                }
-
-                $NC[$s][$n] = @($NC[$s][$n]) + $v
-            }
+            $NC[$s][$n] = . $combineValues $n $NC[$s][$n] $v
         }
     }
     
-    $NC
+    return $NC
 }
