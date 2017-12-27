@@ -1,25 +1,42 @@
-﻿<# [Strict]Parse-ConfigFile.ps1
-    An attempt to recreate the Deploy job-file parser in a strict fail-fast manner.
-
-    Not quite correct RG for the parser:
-
-    File 	-> Lines
-    Lines 	-> Line, Line\nLines
-    Line 	-> Include, Section, Directive, Empty
-    Section -> \[[^\]]+\] 
-    Directive -> \s*Name\s*(=\s*Value)?
-    Name 	-> [^\s=#]+
-    Value 	-> [^#]+|"[^"]*"|'[^']*'
-    Include -> #include\s+(?<jobname>[a-zA-Z0-9]+)
-    Comment -> \s*#.*
-    Empty 	-> 
-#>
-<#
+﻿<#
 .SYNOPSIS
 Parsing function used for ACGroup-style .ini configuration files.
 
 .DESCRIPTION
-Long description
+Used to parse ACGroup-style .ini files.
+
+Grammar: 
+    file  -> <lines>
+    lines -> <line> | <line><lines>
+    line  -> <include> | <section header> | <declaration> | <comment> | <empty>
+    include        -> is<comment>
+    section header -> sh<comment>
+    declarations   -> sd<comment> 
+    comment        -> c
+    empty          -> e
+
+Terminals:
+    is: Include Statement
+        ^#include\s[^\s#]+
+
+    sh: Section Header
+        ^\s*\[[^\]]+\]
+
+    sd: Setting Declaration
+        ^\s*[^\s=#]+\s*(=\s*([^#]|\\#)+|`"[^`"]*`"|'[^']*')?
+
+    c: Comment
+        (?<![\\])#.*
+
+    e: Empty line
+        \s*
+
+Additional Rules:
+    - The first declaration of the file must be preceeded by a section header.
+    - If more than one value is declared for a setting, they will be collected
+      into an array.
+    - All values will we be read as strings and the application using the
+      configuration must determine how to interpret the values.
 
 .PARAMETER Path
 The path to the configuration file.
@@ -60,7 +77,20 @@ of the file currently being processed.
 All included files will be parsed using the same IncludeRootPath, 
 
 .EXAMPLE
-An example
+Normal Read:
+    $conf = Parse-Config "C:\Config.ini"
+
+Accumulating information into a configuration hashtable:
+    $conf = Parse-Config "C:\Config2.ini" $config
+
+Skipping #include statements:
+    $conf = Parse-Config "C:\Config.ini" -NoInclude
+
+Stop the parser from throwing an exception on error (use MetaData object to record errors):
+    $metadata = @{}
+    $conf = Parse-Config "C:\Config.ini" -NotStrict -MetaData $metadata
+    # Echo out the errors:
+    $metadata.Errors | % { Write-Host $_ }
 
 .NOTES
 General notes
@@ -94,7 +124,10 @@ function Parse-ConfigFile {
             HelpMessage='Hashtable used to record MetaData. Includes will be recorded in $MetaData.Includes.'
         )] [Hashtable] $MetaData,                 # Hashtable used to capture MetaData while parsing.
                                                   # This will record Includes as '$MetaData.includes'.
-        [Parameter(Mandatory=$false)][Hashtable] $Cache,
+        [Parameter(
+            Mandatory=$false,
+            HelpMessage='hashtable used to cache includes to minimize reads from disk when rapidly parsing multiple files using common includes.'
+        )][Hashtable] $Cache,
         [parameter(
             Mandatory=$false,
             HelpMessage="Causes the Parser to output extra information to the console."
