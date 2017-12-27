@@ -1,7 +1,5 @@
 ﻿# Enable-RDP.ps1
 
-param([parameter(Mandatory=$false)][Switch]$Run)
-
 function Enable-RDP() {
     
     New-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server' -Name 'fDenyTSConnections' -Value 0 -PropertyType dword -Force
@@ -9,5 +7,3 @@ function Enable-RDP() {
 
     Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
 }
-
-if ($Run) { Enable-RDP }
