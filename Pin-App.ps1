@@ -1,42 +1,48 @@
 #https://docs.microsoft.com/sv-se/windows/configuration/configure-windows-10-taskbar
 
 
-function Pin-App 
-{
+function Pin-App {
     param(
-        [ValidateScript({$list = (New-Object -Com Shell.Application).NameSpace('shell:::{4234d49b-0245-4df3-b780-3893943456e1}').Items() | % Name;if(($_ | ? {$_ -notin $list})) {Write-Warning "Available applications are:`n$($list -join "`n")";return $false} else {return $true}})][string[]]$Application,
+        [string[]]$Application,
         [switch]$Unpin
     )
-    if (!$Application)
-    {
+    if (!$Application) {
         return
     }
     
     $exepath = "$env:TEMP\explorer.exe"
-    #Ugly Hack
-    if ( !$StartMenu.IsPresent -and !(Test-Path $exepath))
-    {
-        #Register-ScheduledTask -TaskName hack -Action (New-ScheduledTaskAction -Execute cmd -Argument "/c mklink $exepath $pshome\powershell.exe") -Principal (New-ScheduledTaskPrincipal -UserId system) -Trigger (New-ScheduledTaskTrigger -Once -At (get-date).addDays(-1)) | Start-ScheduledTask
-        #Unregister-ScheduledTask -TaskName hack -Confirm:$false
-		Copy-Item "$pshome\powershell.exe" $exepath
+
+    #Ugly Hack to circumvent Windows Security...
+    if ( !$StartMenu.IsPresent -and !(Test-Path $exepath)) {
+        Copy-Item "$pshome\powershell.exe" $exepath
+    }
+
+    if (Get-Process -Id $pid | ? {$_.Path -ne $exepath}) {
+        $as = @($Application | % {"'$_'"}) -join ", "
+        if ($PSBoundParameters.ContainsKey("Unpin")) {
+            $as += " -Unpin"
+        }
+	
+        $command = ". $PSScriptRoot\Pin-App.ps1; Pin-App $as"
+
+        & $exepath -Command $command
+        return
+    }
+
+    $shell = New-Object -Com Shell.Application
+    $list = $shell.NameSpace('shell:::{4234d49b-0245-4df3-b780-3893943456e1}').Items()
+    if (!($apps = $list | ? {$a = $_; $Application | ? {$a.Name -like $_}})) {
+        Write-Warning "None of the desired Applications exist!"
+        Write-Warning "Available applications are:`n$(($list | % Name | Sort-Object) -join "`n")"
+        return $false
     }
     
-    if ($Unpin.IsPresent)
-    {
+    if ($Unpin.IsPresent) {
         $verb = 'taskbarunpin'
     }
-    else
-    {
+    else {
         $verb = 'taskbarpin'
     }
 
-    foreach ($appname in $Application)
-    {
-        #Ugly ureadable one-liner
-        $command = "& {((New-Object -Com Shell.Application).NameSpace('shell:::{4234d49b-0245-4df3-b780-3893943456e1}').Items() | ?{`$_.Name -eq '$appname'}).InvokeVerb('$verb')}"
-        & $exepath -command $command
-    }
-
-    #Clean up after ugly hack
-    #Remove-Item $exepath
+    $apps | % { $_.InvokeVerb($verb) }
 }
