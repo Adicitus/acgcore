@@ -3,7 +3,7 @@
 . "$PSScriptRoot\RegexPatterns.ps1"
 . "$PSScriptRoot\Parse-ConfigFile.ps1"
 . "$PSScriptRoot\Find-VolumePath.ps1"
-. "$PSScriptRoot\Change-DriveLetter.ps1" -Import
+. "$PSScriptRoot\Change-DriveLetter.ps1"
 
 <#
 .WISHLIST

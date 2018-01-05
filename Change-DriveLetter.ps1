@@ -16,7 +16,6 @@
       with a named parameter for CurrentLetter.
       
 #>
-param([Switch]$Import)
 
 function Change-DriveLetter(){
     param(
@@ -81,5 +80,3 @@ function Change-DriveLetter(){
         }
     }
 }
-
-if (!$Import) { Change-VolumeDriveLetter }

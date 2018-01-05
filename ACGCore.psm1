@@ -1,0 +1,1 @@
+Get-ChildItem "$PSScriptRoot\" -Filter "*.ps1" -File | % { . $_.FullName } 

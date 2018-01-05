@@ -1,9 +1,5 @@
 ﻿# CommonMOCPatch.ps
 
-param(
-    [Switch]$Import
-)
-
 function Patch-CommonMOCErrors {
     param(
         [Parameter(Mandatory=$false)][String]$VMDir = 'C:\Program Files\Microsoft Learning\',
@@ -13,7 +9,7 @@ function Patch-CommonMOCErrors {
 
     . "$PSScriptRoot\ShoutOut.ps1"
     . "$PSScriptRoot\RegexPatterns.ps1"
-    . "$PSScriptRoot\Rebase-VHDFiles.ps1" -Import
+    . "$PSScriptRoot\Rebase-VHDFiles.ps1"
 
     if (!(Test-Path $vmDir -PathType Container)) {
         shoutOut "Cannot find the VM directory: "  Red -NoNewline
@@ -196,8 +192,4 @@ function Patch-CommonMOCErrors {
             shoutOut "$($vm.VMName) has snapshots already, I'm not touching it."  Green
         }
     }
-}
-
-if (!$Import) {
-    Patch-CommonMOCErrors
 }
