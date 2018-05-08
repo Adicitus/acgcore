@@ -16,6 +16,11 @@ function Install-Feature ($featureName){
             }
         } else {
             shoutOut "Already Installed!" Green
+            shoutOut "InstallState: " Cyan -NoNewline
+            shoutOut $r.InstallState
+            if ($r.InstallState -eq "InstallPending") {
+                shoutOut "Restarting to complete the installation"
+            }
         }
     } else {
         shoutOut "Using DISM..." Cyan -NoNewline
