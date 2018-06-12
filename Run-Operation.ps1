@@ -17,16 +17,19 @@
 function Run-Operation {
     param(
         [parameter(ValueFromPipeline=$true, position=1)] $Operation,
-        [parameter()][Switch] $OutNull
+        [parameter()][Switch] $OutNull,
+        [parameter()][Switch] $NotStrict
     )
     $color = "White"
     
     shoutOut "Running '$Operation'..." Cyan -ContextLevel 2
     
-    # Switch error action preference to catch any errors that might pop up.
-    # Works so long as the internal operation doesn't also change the preference.
-    $OldErrorActionPreference = $ErrorActionPreference
-    $ErrorActionPreference = [System.Management.Automation.ActionPreference]::Stop
+    if (!$NotStrict) {
+        # Switch error action preference to catch any errors that might pop up.
+        # Works so long as the internal operation doesn't also change the preference.
+        $OldErrorActionPreference = $ErrorActionPreference
+        $ErrorActionPreference = [System.Management.Automation.ActionPreference]::Stop
+    }
 
     $r = try {
         if ($Operation -is [scriptblock]) {    # Under certain circumstances the iex cmdlet will not allow
@@ -42,7 +45,10 @@ function Run-Operation {
         $_
     }
 
-    $ErrorActionPreference = $OldErrorActionPreference
+    if (!$NotStrict) {
+        $ErrorActionPreference = $OldErrorActionPreference
+    }
+
     if ($OutNull) {
         return
     }
