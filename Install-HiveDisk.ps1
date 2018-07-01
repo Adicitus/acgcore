@@ -236,7 +236,7 @@ function Install-HiveDisk{
 
         $ta = New-ScheduledTaskAction -Execute "Powershell" -Argument "-NonInteractive -Command Mount-VHD '$($File.FullName)'"
         $tt = New-ScheduledTaskTrigger -AtStartup
-        $ts = New-ScheduledTaskSettingsSet
+        $ts = New-ScheduledTaskSettingsSet -StartWhenAvailable -DontStopIfGoingOnBatteries
         $t = New-ScheduledTask -Action $ta -Trigger $tt -Settings $ts
         $r = $t | Register-ScheduledTask -User "Administrator" -Password 'Pa$$w0rd' -TaskName $tn
         shoutOut "Done!" Green
