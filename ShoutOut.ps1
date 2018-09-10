@@ -44,7 +44,7 @@ function shoutOut {
             New-Item $logDir -ItemType Directory
         }
 
-	    if (!$Quiet) { Write-Host -ForegroundColor $ForegroundColor -Object $Message -NoNewline:$NoNewline }
+	    if ([Environment]::UserInteractive -and !$Quiet) { Write-Host -ForegroundColor $ForegroundColor -Object $Message -NoNewline:$NoNewline }
         
         $parentContext = if ($LogContext) {
             $cs = Get-PSCallStack
