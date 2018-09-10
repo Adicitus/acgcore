@@ -53,7 +53,12 @@
 #>
 function Install-HiveDisk{
     param(
-        [parameter(ValueFromPipeline=$true, Position=1)][System.IO.FileInfo]$File
+        [parameter(ValueFromPipeline=$true, Position=1)][System.IO.FileInfo]$File,
+        [Parameter(Postion=2, Mandatory=$false)][hashtable]$Credential = @{
+            Username='MDTUser'
+            Password='Pa$$w0rd'
+            Domain=$env:COMPUTERNAME
+        }
     )
 
     if ( !(Get-Module Hyper-V -ListAvailable )) {
@@ -238,7 +243,7 @@ function Install-HiveDisk{
         $tt = New-ScheduledTaskTrigger -AtStartup
         $ts = New-ScheduledTaskSettingsSet -StartWhenAvailable -DontStopIfGoingOnBatteries
         $t = New-ScheduledTask -Action $ta -Trigger $tt -Settings $ts
-        $r = $t | Register-ScheduledTask -User "Administrator" -Password 'Pa$$w0rd' -TaskName $tn
+        $r = $t | Register-ScheduledTask -User "$env:COMPUTERNAME\MDTUser" -Password 'Pa$$w0rd' -TaskName $tn
         shoutOut "Done!" Green
     }
 }
