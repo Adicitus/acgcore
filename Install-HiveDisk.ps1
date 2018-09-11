@@ -4,6 +4,7 @@
 . "$PSScriptRoot\Parse-ConfigFile.ps1"
 . "$PSScriptRoot\Find-VolumePath.ps1"
 . "$PSScriptRoot\Change-DriveLetter.ps1"
+. "$PSScriptRoot\New-PSCredential.ps1"
 
 <#
 .WISHLIST
@@ -230,20 +231,26 @@ function Install-HiveDisk{
         }
 
 
-        $tn = "MountHive($($File.Name))"
-        if ($t = Get-ScheduledTask | ? {$_.TaskName -eq $tn}) {
+        $jobName = "MountHive($($File.Name))"
+        if ($t = Get-ScheduledJob | ? {$_.Name -eq $jobName}) {
             shoutOut "Found a startup task for this hive, removing it.... " Cyan -NoNewline
-            $t | Unregister-ScheduledTask -Confirm:$false
+            $t | Unregister-ScheduledJob -Confirm:$false
             shoutOut "Done!" Green
         }
 
-        shoutOut "Adding startup task to mount the hive... " Cyan -NoNewline
-
-        $ta = New-ScheduledTaskAction -Execute "Powershell" -Argument "-NonInteractive -Command Mount-VHD '$($File.FullName)'"
-        $tt = New-ScheduledTaskTrigger -AtStartup
-        $ts = New-ScheduledTaskSettingsSet -StartWhenAvailable -DontStopIfGoingOnBatteries
-        $t = New-ScheduledTask -Action $ta -Trigger $tt -Settings $ts
-        $r = $t | Register-ScheduledTask -User "$env:COMPUTERNAME\MDTUser" -Password 'Pa$$w0rd' -TaskName $tn
+        shoutOut "Adding startup job to mount the hive... " Cyan -NoNewline
+        {
+            $trigger = New-JobTrigger -AtStartup
+            $options = New-ScheduledJobOption -RunElevated -MultipleInstancePolicy IgnoreNew -StartIfOnBattery
+            $block = [scriptblock]::Create("Get-VHD '{0}' | Mount-VHD" -f $File.FullName)
+            $username = if ($Credential.Domain) {
+                "{0}\{1}" -f $Credential.Domain, $Credential.Username
+            } else {
+                $Credential.Username
+            }
+            $cred = New-PSCredential $username $Credential.Password
+            Register-ScheduledJob -Name $jobName -ScriptBlock $block -Trigger $trigger -ScheduledJobOption $options -Credential $cred
+        } | Run-Operation
         shoutOut "Done!" Green
     }
 }
