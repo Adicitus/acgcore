@@ -39,7 +39,7 @@
     - Mounts VHDs as VHDs rather than as DiskImages, because for whatever reason Hyper-V cannot start VMs located on
       volumes mounted as DiskImages. However, this means that hive disks need the Hyper-V feature to function, since
       it relies on cmdlets in the Hyper-V module.
-    - 'hive.ini' files have 3 unique directives that go into the [Install] section:
+    - 'hive.ini' files have 2 unique directives that go into the [Install] section:
        * DriveLetter: specifies the drive-letter that should be assigned to this hive. Any volume already using that
             driveletter will be moved to Z
        * MountPoint: specifies a location within a pre-existing FS that the hive should be mounted.
@@ -54,7 +54,7 @@
 function Install-HiveDisk{
     param(
         [parameter(ValueFromPipeline=$true, Position=1)][System.IO.FileInfo]$File,
-        [Parameter(Postion=2, Mandatory=$false)][hashtable]$Credential = @{
+        [Parameter(Position=2, Mandatory=$false)][hashtable]$Credential = @{
             Username='MDTUser'
             Password='Pa$$w0rd'
             Domain=$env:COMPUTERNAME
