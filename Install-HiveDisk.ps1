@@ -242,14 +242,31 @@ function Install-HiveDisk{
         {
             $trigger = New-JobTrigger -AtStartup
             $options = New-ScheduledJobOption -RunElevated -MultipleInstancePolicy IgnoreNew -StartIfOnBattery
-            $block = [scriptblock]::Create("Get-VHD '{0}' | Mount-VHD" -f $File.FullName)
+            $block = {
+                param($vhdPath)
+                $logName = "C:\temp\mountHive.log"
+
+                if (!(Test-Path "C:\temp" -PathType Directory )) {
+                    mkdir C:\temp
+                }
+                "{0:yyyyMMdd-HHmmss}: Attempting to mount '{1}'..." -f [datetime]::now, $vhdPath >> $logName
+                Get-VHd $vhdPath | Mount-VHD *>> $logName
+                
+                $vhd = Get-VHD $vhdPath
+                if ($vhd.Attached) {
+                    "{0:yyyyMMdd-HHmmss}: '{1}' is mounted as disk {2}." -f [datetime]::now, $vhdPath, $vhd.DiskNumber >> $logName
+                    
+                } else {
+                    "{0:yyyyMMdd-HHmmss}: '{1}' is not mounted." -f [datetime]::now, $vhdPath >> $logName
+                }
+            }
             $username = if ($Credential.Domain) {
                 "{0}\{1}" -f $Credential.Domain, $Credential.Username
             } else {
                 $Credential.Username
             }
             $cred = New-PSCredential $username $Credential.Password
-            Register-ScheduledJob -Name $jobName -ScriptBlock $block -Trigger $trigger -ScheduledJobOption $options -Credential $cred
+            Register-ScheduledJob -Name $jobName -ScriptBlock $block -Trigger $trigger -ScheduledJobOption $options -Credential $cred -ArgumentList $File.FullName
         } | Run-Operation
         shoutOut "Done!" Green
     }
