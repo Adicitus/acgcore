@@ -58,7 +58,7 @@ function Render-Template{
 
     $template = [System.IO.File]::ReadAllText($templatePath)
 
-    $regex = [regex]::new('<<(([^>]|>(?!>))+)>>', [System.Text.RegularExpressions.RegexOptions]::Multiline)
+    $regex = New-Object regex ('<<(([^>]|>(?!>))+)>>', [System.Text.RegularExpressions.RegexOptions]::Multiline)
     $regex.Replace($template, {param($match) Invoke-Expression $match.Groups[1].Value })
     
 }
