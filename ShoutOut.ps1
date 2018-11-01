@@ -8,6 +8,22 @@ if ( !(Get-variable "_ShoutOutSettings" -ErrorAction SilentlyContinue) -or $scri
     }
 }
 
+function Set-ShoutOutConfig {
+  param(
+    $ForegroundColor,
+    $LogFile,
+    $LogContext
+  )
+  
+  foreach( $k in $PSBoundParameters.Keys) {
+    $_shoutOutSettings[$k] = $PSBoundParameters[$k]
+  }
+}
+
+function Get-ShoutOutConfig {
+  return $_ShoutOutSettings
+}
+
 # First-things first: Logging function (is the realest, push the message and let the harddrive feel it.)
 function shoutOut {
 	param(
