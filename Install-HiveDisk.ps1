@@ -244,20 +244,32 @@ function Install-HiveDisk{
             $options = New-ScheduledJobOption -RunElevated -MultipleInstancePolicy IgnoreNew -StartIfOnBattery
             $block = {
                 param($vhdPath)
-                $logName = "C:\temp\mountHive.log"
-
+                $logName = "$vhdPath.mount.log"
+				
+				try {
+					Import-Module ACGCore -ErrorAction Stop
+				} catch {
+					"{0:yyyyMMdd-HHmmss}: Unable to import the 'ACGCore' module!" -f [datetime]::now >> $logName
+					$_ >> $logName
+					return
+				}
+				
+				Set-ShoutOutConfig -LogFile $logFile
+				
                 if (!(Test-Path "C:\temp" -PathType Directory )) {
                     mkdir C:\temp
                 }
-                "{0:yyyyMMdd-HHmmss}: Attempting to mount '{1}'..." -f [datetime]::now, $vhdPath >> $logName
-                Get-VHd $vhdPath | Mount-VHD *>> $logName
+				$vhd = Get-VHD $vhdPath
+                "{0:yyyyMMdd-HHmmss}: Attempting to mount '{1}'..." -f [datetime]::now, $vhdPath | shoutOut
+				
+                $vhd | Mount-VHD *>&1 | shoutOut
                 
                 $vhd = Get-VHD $vhdPath
                 if ($vhd.Attached) {
-                    "{0:yyyyMMdd-HHmmss}: '{1}' is mounted as disk {2}." -f [datetime]::now, $vhdPath, $vhd.DiskNumber >> $logName
+                    "{0:yyyyMMdd-HHmmss}: '{1}' is mounted as disk {2}." -f [datetime]::now, $vhdPath, $vhd.DiskNumber | shoutOut
                     
                 } else {
-                    "{0:yyyyMMdd-HHmmss}: '{1}' is not mounted." -f [datetime]::now, $vhdPath >> $logName
+                    "{0:yyyyMMdd-HHmmss}: '{1}' is not mounted." -f [datetime]::now, $vhdPath | shoutOut
                 }
             }
             $username = if ($Credential.Domain) {
