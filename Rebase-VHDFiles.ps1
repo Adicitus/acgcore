@@ -6,10 +6,12 @@ try { $_ = get-Variable RegexPatterns -Scope Script -ErrorAction Stop } catch { 
 function Rebase-VHDFiles() {
     
     param(
-        [parameter(Mandatory=$false)] [string[]] $VHDFolder = 'C:\Program Files\Microsoft Learning'
+        [parameter(Mandatory=$false, Position=1)] [string[]] $VHDFolder = 'C:\Program Files\Microsoft Learning',
+        [parameter(Mandatory=$false, Position=2)] [string[]] $ExcludePaths = @()
     )
 
     $vhdFiles = $VHDFolder | ls -Recurse | ? { $_ -match '.*\.(a)?vhd(x)?' }
+    $vhdFiles = $vhdFiles | ? { $p = $_.FullName; -not ($ExcludePaths | ? { $p -like $_ }) }
     shoutOut "Found the following VHDs:"
     $vhdFiles | % FullName | % { shoutOut " | $_" }
     $vhds = $vhdFiles | % { Get-VHD -Path $_.FullName }
