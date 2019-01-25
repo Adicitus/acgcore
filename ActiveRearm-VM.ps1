@@ -6,21 +6,10 @@ function ActiveRearm-VM {
     param(
         $vm,
         $credentials,
-        $MaintenanceSwitch = $null,
         $RearmScriptFile = "$PSScriptRoot\Snippets\Rearm.ps1"
     )
 
     shoutOut ("Attempting Active Rearm: $($vm.VMName) ".PadRight(80,'=')) Magenta
-
-    if (!$MaintenanceSwitch) {
-        $name = ("Maintenance{0:X5}" -f (new-Object System.Random).Next(10000, 50000))
-        shoutOut "Adding '$name' switch..." Cyan
-        $MaintenanceSwitch = New-VMSwitch -Name $name -SwitchType Internal
-        $usingTempSwitch = $true
-    }
-
-    $MaintenanceSwitchName = $MaintenanceSwitch.Name
-    $MaintenanceAdapterName = "Maintenance"
 
     $cleanupClosure = { # Performing cleanup in a separate step so that we don't need to replicate the code in the main step.
         param($vm)
@@ -32,20 +21,7 @@ function ActiveRearm-VM {
             shoutOut "Failed!" Red
             shoutOUt $_ Red
         }
-        shoutOut "Removing '$MaintenanceAdapterName' adapter..." Cyan
-        $vm | Get-VMNetworkAdapter | ? { $_.Name -eq $MaintenanceAdapterName } | Remove-VMNetworkAdapter -Confirm:$false
-        if ($usingTempSwitch) {
-            shoutOut "Removing '$MaintenanceSwitchName' switch..." Cyan
-            $MaintenanceSwitch | Remove-VMSwitch -Force
-        }
     }
-
-    shoutOut "Adding '$MaintenanceAdapterName' adapter to '$($vm.VMName)'..." Cyan
-    $vm | Add-VMNetworkAdapter -Name $MaintenanceAdapterName
-    $na = $vm | Get-VMNetworkAdapter | ? { $_.Name -eq $MaintenanceAdapterName }
-        
-    shoutOut "Connecting '$MaintenanceAdapterName' adapter to '$MaintenanceSwitchName' switch..." Cyan
-    $na | Connect-VMNetworkAdapter -SwitchName $MaintenanceSwitchName
         
     shoutOut "Starting '$($vm.VMName)'..." Cyan
 
@@ -84,7 +60,6 @@ function ActiveRearm-VM {
             shoutOut "$($_.VMName) timed out while waiting for network adapters.... (waited ${timeWaited}ms, $($_.Status))" Red
             $netAdapterTimedout = $true;
         }
-        # $na = $vm | Get-VMNetworkAdapter | ? { $_.Name -eq $MaintenanceAdapterName }
         $vmadapters = $vm | Get-VMNetworkAdapter
     }
 
