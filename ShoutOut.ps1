@@ -3,7 +3,7 @@
 if ( !(Get-variable "_ShoutOutSettings" -ErrorAction SilentlyContinue) -or $script:_ShoutOutSettings -isnot [hashtable]) {
     $script:_ShoutOutSettings = @{
         ForegroundColor="White"
-        LogFile="C:\temp\shoutOut.$env:COMPUTERNAME.$pid.log"
+        LogFile="C:\temp\shoutOut.{0}.{1}.{2:yyyyMMddHHmmss}.log" -f $env:COMPUTERNAME, $pid, [datetime]::Now
         LogContext=$true
     }
 }
