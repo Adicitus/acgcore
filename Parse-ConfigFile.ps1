@@ -58,6 +58,10 @@ Stops the parser from outputting anything to the console.
 Hashtable used to record MetaData while parsing.
 Presently only records Includes and errors.
 
+.PARAMETER Cache
+Hashtable used to cache the results of each file parsed. Useful to minimize
+reads from disk when parsing multiple job files using the common includes.
+
 .PARAMETER Loud
 Causes the parser to output extra information to the console.
 
@@ -126,7 +130,7 @@ function Parse-ConfigFile {
                                                   # This will record Includes as '$MetaData.includes'.
         [Parameter(
             Mandatory=$false,
-            HelpMessage='hashtable used to cache includes to minimize reads from disk when rapidly parsing multiple files using common includes.'
+            HelpMessage='Hashtable used to cache includes to minimize reads from disk when rapidly parsing multiple files using common includes.'
         )][Hashtable] $Cache,
         [parameter(
             Mandatory=$false,
@@ -212,6 +216,7 @@ function Parse-ConfigFile {
                     $parseArgs = @{
                         Config=$conf;
                         MetaData=$MetaData;
+                        Cache=$Cache
                         IncludeRootPath=$IncludeRootPath;
                     }
 
