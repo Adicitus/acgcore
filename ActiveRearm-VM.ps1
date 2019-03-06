@@ -35,6 +35,10 @@ function ActiveRearm-VM {
     $waitTimeout = 300000 #(5min)
     $waitStart = Get-Date
 
+    ###########################################################################
+    #== Start: Waiting for VMs to initialize =================================#
+    ###########################################################################
+
     # Wait for the VM to start...
     $vm = $vm | Get-VM
     while ($vm.Heartbeat -notlike "OK*") {
@@ -66,6 +70,16 @@ function ActiveRearm-VM {
     if ( !$netAdapterTimedout ) {
         shoutOut "All adapter initialized! (waited ${timeWaited}ms, $($_.Status))" Green
     }
+    
+    ###########################################################################
+    #== End: Waiting for VMs to initialize ===================================#
+    ###########################################################################
+
+    $successfulConnection = $false
+
+    ###########################################################################
+    #== Start: Attempt to connect using IP-address ===========================#
+    ###########################################################################
     $ipaddresses = $vmadapters | % { $_.IPAddresses }
     shoutOut "Got the following IP addresses: $($ipaddresses -join ", ")"
 
@@ -89,8 +103,6 @@ function ActiveRearm-VM {
     }
 
     shoutOut "Active addresses: $($activeAddresses -join ", ")"
-
-    $successfulConnection = $false
 
     $activeAddresses | % {
         if ($successfulConnection) { return }
@@ -129,9 +141,19 @@ function ActiveRearm-VM {
             }
         }
     }
+
+    ###########################################################################
+    #== End: Trying to connect using IP-address ==============================#
+    ###########################################################################
+
         
-    if (!$successfulConnection) {
+    if (!$successfulConnection) { # Fallback clause...
         shoutOut "Unable to connect to '$($vm.VMName)' using IP!" Red
+
+        #######################################################################
+        #== Start: trying to connect using VMName ============================#
+        #######################################################################
+
         if (Get-Command "Invoke-Command" | ? { $_.Parameters.Keys.Contains("VMName") }) { # Newer versions of Windows allow WinRM connections via VMName, so this is our backup.
             shoutOut "Trying to connect using VM name..." Cyan
             $Credentials | % {
@@ -146,6 +168,10 @@ function ActiveRearm-VM {
                 }
             }
         }
+
+        #######################################################################
+        #== End: Trying to connect using VMName ==============================#
+        #######################################################################
     }
 
     if (!$successfulConnection) {
