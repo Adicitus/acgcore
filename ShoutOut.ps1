@@ -2,16 +2,23 @@
 
 if ( !(Get-variable "_ShoutOutSettings" -ErrorAction SilentlyContinue) -or $script:_ShoutOutSettings -isnot [hashtable]) {
     $script:_ShoutOutSettings = @{
-        ForegroundColor="White"
+        DefaultMsgType="Info"
         LogFile="C:\temp\shoutOut.{0}.{1}.{2:yyyyMMddHHmmss}.log" -f $env:COMPUTERNAME, $pid, [datetime]::Now
         LogFileRedirection=@{}
+        MsgStyles=@{
+            Exception =     @{ ForegroundColor="Red"; BackgroundColor="Black" }
+            Error =         @{ ForegroundColor="Red" }
+            Warning =       @{ ForegroundColor="Yellow"; BackgroundColor="Black" }
+            Info =          @{ ForegroundColor="Cyan" }
+            Result =        @{ ForegroundColor="White" }
+        }
         LogContext=$true
     }
 }
 
 function Set-ShoutOutConfig {
   param(
-    $ForegroundColor,
+    $DefaultMsgType,
     $LogFile,
     $LogContext
   )
@@ -73,7 +80,8 @@ function Clear-ShoutOutRedirect {
 function shoutOut {
 	param(
         [parameter(Mandatory=$false,  position=1, ValueFromPipeline=$true)] [Object]$Message,
-		[parameter(Mandatory=$false, position=2)][String]$ForegroundColor=$null,
+        [Alias("ForegroundColor")]
+		[parameter(Mandatory=$false, position=2)][String]$MsgType=$null,
 		[parameter(Mandatory=$false, position=3)][String]$LogFile=$null,
 		[parameter(Mandatory=$false, position=4)][Int32]$ContextLevel=1, # The number of levels to proceed up the call
                                                                          # stack when reporting the calling script.
@@ -88,14 +96,27 @@ function shoutOut {
         # Apply global settings.
         if ( ( $settingsV = Get-Variable "_ShoutOutSettings" ) -and ($settingsV.Value -is [hashtable]) ) {
             $settings = $settingsV.Value
-            if (!$ForegroundColor -and $settings.containsKey("ForegroundColor")) { $ForegroundColor = $settings.ForegroundColor }
+            if (!$MsgType -and $settings.containsKey("DefaultMsgType")) { $MsgType = $settings.DefaultMsgType }
             if (!$LogFile -and $settings.containsKey("LogFile")) { $LogFile = $settings.LogFile }
-            if ($settings.LogFileRedirection.ContainsKey($ForegroundColor)) { $logFile = $settings.LogFileRedirection[$ForegroundColor] }
+            if ($settings.LogFileRedirection.ContainsKey($MsgType)) { $logFile = $settings.LogFileRedirection[$MsgType] }
+            
+            if ($settings.containsKey("MsgStyles") -and ($settings.MsgStyles -is [hashtable]) -and $settings.MsgStyles.containsKey($MsgType)) {
+                $msgStyle = $settings.MsgStyles[$MsgType]
+            }
         }
 
         # Hard-coded defaults just in case.
-        if (!$ForegroundColor) { $ForegroundColor = "White" }
+        if (!$MsgType) { $MsgType = "Information" }
         if (!$LogFile) { $LogFile = ".\setup.log" }
+        
+        if (!$msgStyle) {
+            if ($MsgType -in [enum]::GetNames([System.ConsoleColor])) {
+                $msgStyle = @{ ForegroundColor=$MsgType }
+            } else {
+                $msgStyle = @{ ForegroundColor="White" }
+            }
+        }
+        
         # Apply formatting to make output more readable.
         if ($Message -isnot [String]) {
             $message = $message | Out-String
@@ -106,7 +127,16 @@ function shoutOut {
             New-Item $logDir -ItemType Directory
         }
 
-	    if ([Environment]::UserInteractive -and !$Quiet) { Write-Host -ForegroundColor $ForegroundColor -Object $Message -NoNewline:$NoNewline }
+	    if ([Environment]::UserInteractive -and !$Quiet) {
+            $p = @{
+                Object = $Message
+                NoNewline = $NoNewline
+            }
+            if ($msgStyle.ForegroundColor) { $p.ForegroundColor = $msgStyle.ForegroundColor }
+            if ($msgStyle.BAckgroundColor) { $p.BackgroundColor = $msgStyle.BackgroundColor }
+
+            Write-Host @p
+        }
         
         $parentContext = if ($LogContext) {
             $cs = Get-PSCallStack
@@ -141,6 +171,6 @@ function shoutOut {
         } else {
             "[context logging disabled]"
         }
-	    "{0}|{1}|{2}|{3}|{4:yyyyMMdd-HH:mm:ss}|{5}" -f $ForegroundColor, $env:COMPUTERNAME, $pid, $parentContext, [datetime]::Now, $Message | Out-File $LogFile -Encoding utf8 -Append
+	    "{0}|{1}|{2}|{3}|{4:yyyyMMdd-HH:mm:ss}|{5}" -f $MsgType, $env:COMPUTERNAME, $pid, $parentContext, [datetime]::Now, $Message | Out-File $LogFile -Encoding utf8 -Append
     }
 }
