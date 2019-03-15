@@ -6,6 +6,7 @@ if ( !(Get-variable "_ShoutOutSettings" -ErrorAction SilentlyContinue) -or $scri
         LogFile="C:\temp\shoutOut.{0}.{1}.{2:yyyyMMddHHmmss}.log" -f $env:COMPUTERNAME, $pid, [datetime]::Now
         LogFileRedirection=@{}
         MsgStyles=@{
+            Success =       @{ ForegroundColor="Green" }
             Exception =     @{ ForegroundColor="Red"; BackgroundColor="Black" }
             Error =         @{ ForegroundColor="Red" }
             Warning =       @{ ForegroundColor="Yellow"; BackgroundColor="Black" }
@@ -19,18 +20,18 @@ if ( !(Get-variable "_ShoutOutSettings" -ErrorAction SilentlyContinue) -or $scri
 function _ensureShoutOutLogFile {
     param(
         [string]$logFile,
-        [string]$MsgType
+        [string]$MsgType = "*"
     )
 
     if (!(Test-Path $logFile -PathType Leaf)) {
         $logDir = Split-Path $logFile -Parent
         try {
-            return new-Item $logFile -ItemType File
+            return new-Item $logFile -ItemType File -ErrorAction Stop
         } catch {
             "Unable to create log file '{0}' for '{1}'." -f $logFile, $msgType | shoutOut -MsgType Error
             "Messages marked with '{0}' will be redirected." -f $msgType | shoutOut -MsgType Error
-            shoutOut $_
-            throw $_
+            shoutOut $_ Error
+            throw ("Unable to use log file '{0}', the file cannot be created." -f $logFile)
         }
     }
 
@@ -40,7 +41,7 @@ function _ensureShoutOutLogFile {
 function _ensureshoutOutLogHandler {
     param(
         [scriptblock]$logHandler,
-        [string]$msgType
+        [string]$msgType = "*"
     )
 
     $params = $logHandler.Ast.ParamBlock.Parameters
@@ -48,7 +49,7 @@ function _ensureshoutOutLogHandler {
     if ($params.count -eq 0) {
         "Invalid handler, no parameters found: {0}" -f $logHandler | shoutOut -MsgType Error
         "Messages marked with '{0}' will not be redirected using this handler." -f $msgType | shoutOut -MsgType Error
-        throw "No parameters declared by the givn handler."
+        throw "No parameters declared by the given handler."
     }
 
     $paramName = '$message'
@@ -57,13 +58,13 @@ function _ensureshoutOutLogHandler {
     if (!$param) {
         "Invalid handler, no '{0}' parameter found" -f $paramName | shoutOut -MsgType Error
         "Messages marked with '{0}' will not be redirected using this handler." -f $msgType | shoutOut -MsgType Error
-        throw "No 'message' parameter declared by handler."
+        throw ("No '{0}' parameter declared by the given handler." -f $paramName)
     }
 
     if (($t = $param.StaticType) -and !($t.IsAssignableFrom([String])) ) {
-        "Invalid handler, the '{0}' parameter should accept values of type String." -f $paramName | shoutOut -MsgType Error
+        "Invalid handler, the '{0}' parameter should accept values of type [String]." -f $paramName | shoutOut -MsgType Error
         "Messages marked with '{0}' will not be redirected using this handler." -f $msgType | shoutOut -MsgType Error
-        throw "Message parameter is of invalid type (not assignable from [string])."
+        throw ("'{0}' parameter on the given handler is of invalid type (not assignable from [string])." -f $paramName)
     }
 
     return $logHandler
@@ -101,43 +102,19 @@ function Set-ShoutOutRedirect {
     $log = $null
     switch ($PSCmdlet.ParameterSetName) {
     "Scriptblock" {
-        $params = $logHandler.Ast.ParamBlock.Parameters
-
-        if ($params.count -eq 0) {
-            "Invalid handler, no parameters found: {0}" -f $logHandler | shoutOut -MsgType Error
-            "Messages marked with '{0}' will not be redirected using this handler." -f $msgType | shoutOut -MsgType Error
-            return
+            try {
+                _ensureshoutOutLogHandler $LogHandler $msgType | Out-Null
+            } catch {
+                return $_
+            }
+            $log = $LogHandler
+            break
         }
-
-        $paramName = '$message'
-        $param = $params | ? { $_.Name.Extent.Text -eq $paramName }
-
-        if (!$param) {
-            "Invalid handler, no '{0}' parameter found" -f $paramName | shoutOut -MsgType Error
-            "Messages marked with '{0}' will not be redirected using this handler." -f $msgType | shoutOut -MsgType Error
-            return
-        }
-
-        if (($t = $param.StaticType) -and !($t.IsAssignableFrom([String])) ) {
-            "Invalid handler, the '{0}' parameter should accept values of type String." -f $paramName | shoutOut -MsgType Error
-            "Messages marked with '{0}' will not be redirected using this handler." -f $msgType | shoutOut -MsgType Error
-            return
-        }
-        $log = $LogHandler
-        break
-    }
     "StringPath" {
-            if (!(Test-Path $logFile -PathType Leaf)) {
-                $logDir = Split-Path $logFile -Parent
-                try {
-                    new-Item $logFile -ItemType File | Out-Null
-                } catch {
-                    "Unable to create log file '{0}' for '{1}'." -f $logFile, $msgType | shoutOut -MsgType Error
-                    "Messages marked with '{0}' will be redirected." -f $msgType | shoutOut -MsgType Error
-                    shoutOut $_
-                    return $_
-                }
-
+            try {
+                _ensureShoutOutLogFile $LogFile $msgType | Out-Null
+            } catch {
+                return $_
             }
 
             $log = $LogFile
