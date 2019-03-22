@@ -3,7 +3,7 @@
 if ( !(Get-variable "_ShoutOutSettings" -ErrorAction SilentlyContinue) -or $script:_ShoutOutSettings -isnot [hashtable]) {
     $script:_ShoutOutSettings = @{
         DefaultMsgType="Info"
-        LogFile="C:\temp\shoutOut.{0}.{1}.{2:yyyyMMddHHmmss}.log" -f $env:COMPUTERNAME, $pid, [datetime]::Now
+        DefaultLog="C:\temp\shoutOut.{0}.{1}.{2:yyyyMMddHHmmss}.log" -f $env:COMPUTERNAME, $pid, [datetime]::Now
         LogFileRedirection=@{}
         MsgStyles=@{
             Success =       @{ ForegroundColor="Green" }
@@ -72,18 +72,35 @@ function _ensureshoutOutLogHandler {
 
 function Set-ShoutOutConfig {
   param(
-    $DefaultMsgType,
-    $LogFile,
-    $LogContext
+    [string]$DefaultMsgType,
+    [Alias("LogFile")]
+    $Log,
+    [boolean]$LogContext
   )
   
-  foreach( $k in $PSBoundParameters.Keys) {
-    $t1 = $_shoutOutSettings[$k].GetType()
-    $t2 = $PSBoundParameters[$k].GetType()
-    if ($t1.IsAssignableFrom($t2)) {
-        $_shoutOutSettings[$k] = $PSBoundParameters[$k]
+  $_shoutOutSettings.DefaultMsgType = $DefaultMsgType
+
+  switch ($log.Gettype().Name) {
+    "string" {
+        try {
+            _ensureShoutOutLogFile $log -ErrorAction Stop | Out-Null
+            $_shoutOutSettings.DefaultLog = $log
+        } catch {
+            return $_
+        }
+    }
+    "scriptblock" {
+        try {
+            _ensureshoutOutLogHandler $log -ErrorAction Stop | Out-Null
+            $_shoutOutSettings.DefaultLog = $log
+        } catch {
+            return $_
+        }
     }
   }
+
+  $_shoutOutSettings.LogContext = $LogContext
+
 }
 
 function Get-ShoutOutConfig {
@@ -121,7 +138,7 @@ function Set-ShoutOutRedirect {
         }
     }
 
-    $oldLog = $_ShoutOutSettings.LogFile
+    $oldLog = $_ShoutOutSettings.DefaultLog
     if ($_ShoutOutSettings.LogFileRedirection.ContainsKey($msgType)) {
         $oldLog = $_ShoutOutSettings.LogFileRedirection[$msgType]
     }
@@ -137,7 +154,7 @@ function Clear-ShoutOutRedirect {
 
     if ($_ShoutOutSettings.LogFileRedirection.ContainsKey($msgType)) {
         $l = $_ShoutOutSettings.LogFileRedirection[$msgType]
-        "Removing message redirection for '{0}', messages of this type will be logged in the default log file ('{1}')." -f $msgType, $_ShoutOutSettings.LogFile | shoutOut -LogFile $l
+        "Removing message redirection for '{0}', messages of this type will be logged in the default log file ('{1}')." -f $msgType, $_ShoutOutSettings.DefaultLog | shoutOut -LogFile $l
         $_ShoutOutSettings.LogFileRedirection.Remove($msgType)
         "Removed message redirection for '{0}', previously messages were written to '{1}'." -f $msgType, $l | shoutOut
     }
@@ -166,7 +183,7 @@ function shoutOut {
         if ( ( $settingsV = Get-Variable "_ShoutOutSettings" ) -and ($settingsV.Value -is [hashtable]) ) {
             $settings = $settingsV.Value
             if (!$MsgType -and $settings.containsKey("DefaultMsgType")) { $MsgType = $settings.DefaultMsgType }
-            if (!$Log -and $settings.containsKey("LogFile")) { $Log = $settings.LogFile }
+            if (!$Log -and $settings.containsKey("DefaultLog")) { $Log = $settings.DefaultLog }
             if ($settings.LogFileRedirection.ContainsKey($MsgType)) { $Log = $settings.LogFileRedirection[$MsgType] }
             
             if ($settings.containsKey("MsgStyles") -and ($settings.MsgStyles -is [hashtable]) -and $settings.MsgStyles.containsKey($MsgType)) {
