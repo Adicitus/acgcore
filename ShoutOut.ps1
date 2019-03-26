@@ -71,40 +71,71 @@ function _ensureshoutOutLogHandler {
 }
 
 function Set-ShoutOutConfig {
-  param(
-    [string]$DefaultMsgType,
-    [Alias("LogFile")]
-    $Log,
-    [boolean]$LogContext
-  )
-  
-  $_shoutOutSettings.DefaultMsgType = $DefaultMsgType
+    param(
+        [string]$DefaultMsgType,
+        [Alias("LogFile")]
+        $Log,
+        [boolean]$LogContext
+    )
 
-  switch ($log.Gettype().Name) {
-    "string" {
-        try {
-            _ensureShoutOutLogFile $log -ErrorAction Stop | Out-Null
-            $_shoutOutSettings.DefaultLog = $log
-        } catch {
-            return $_
-        }
+    if ($PSBoundParameters.ContainsKey("DefaultMsgType")) {
+        $_shoutOutSettings.DefaultMsgType = $DefaultMsgType
     }
-    "scriptblock" {
-        try {
-            _ensureshoutOutLogHandler $log -ErrorAction Stop | Out-Null
-            $_shoutOutSettings.DefaultLog = $log
-        } catch {
-            return $_
-        }
-    }
-  }
 
-  $_shoutOutSettings.LogContext = $LogContext
+    if ($PSBoundParameters.ContainsKey("Log")) {
+        Set-ShoutOutDefaultLog $Log | Out-Null
+    }
+
+    if ($PSBoundParameters.ContainsKey("LogContext")) {
+        $_shoutOutSettings.LogContext = $LogContext
+    }
 
 }
 
 function Get-ShoutOutConfig {
   return $_ShoutOutSettings
+}
+
+function Set-ShoutOutDefaultLog {
+    param(
+        [parameter(Mandatory=$true, ValueFromPipeline=$true, Position=1, ParameterSetName="LogFilePath")][String]$LogFilePath,
+        [parameter(Mandatory=$true, ValueFromPipeline=$true, Position=1, ParameterSetName="LogFile")][System.IO.FileInfo]$LogFile,
+        [parameter(Mandatory=$true, ValueFromPipeline=$true, Position=1, ParameterSetName="LogHandler")][scriptblock]$LogHandler
+    )
+
+    switch ($PSCmdlet.ParameterSetName) {
+        "LogFilePath" {
+            try {
+                _ensureShoutOutLogFile $LogFilePath -ErrorAction Stop | Out-Null
+                $_shoutOutSettings.DefaultLog = $LogFilePath
+            } catch {
+                return $_
+            }
+        }
+        "LogFile" {
+            try {
+                _ensureShoutOutLogFile $LogFile.FullName -ErrorAction Stop | Out-Null
+                $_shoutOutSettings.DefaultLog = $LogFile.FullName
+            } catch {
+                return $_
+            }
+        }
+        "LogHandler" {
+            try {
+                _ensureshoutOutLogHandler $LogHandler -ErrorAction Stop | Out-Null
+                $_shoutOutSettings.DefaultLog = $LogHandler
+            } catch {
+                return $_
+            }
+        }
+    }
+    
+}
+
+function Get-ShoutOutDefaultLog {
+    param()
+
+    return $script:_ShoutOutSettings.DefaultLog
 }
 
 function Set-ShoutOutRedirect {
@@ -146,6 +177,14 @@ function Set-ShoutOutRedirect {
     $_ShoutOutSettings.LogFileRedirection[$msgType] = $log
     "Messages of type '{0}' have been redirected to '{1}'." -f $msgType, $log | shoutOut -MsgType $msgType
 }
+
+function Get-ShoutOutRedirect {
+    param(
+        [string]$msgType
+    )
+
+    return $script:_ShoutOutSettings.LogFileRedirection[$msgType]
+} 
 
 function Clear-ShoutOutRedirect {
     param(
