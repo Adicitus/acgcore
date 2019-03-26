@@ -2,75 +2,276 @@
 
 if ( !(Get-variable "_ShoutOutSettings" -ErrorAction SilentlyContinue) -or $script:_ShoutOutSettings -isnot [hashtable]) {
     $script:_ShoutOutSettings = @{
-        ForegroundColor="White"
-        LogFile="C:\temp\shoutOut.{0}.{1}.{2:yyyyMMddHHmmss}.log" -f $env:COMPUTERNAME, $pid, [datetime]::Now
+        DefaultMsgType="Info"
+        DefaultLog="C:\temp\shoutOut.{0}.{1}.{2:yyyyMMddHHmmss}.log" -f $env:COMPUTERNAME, $pid, [datetime]::Now
+        LogFileRedirection=@{}
+        MsgStyles=@{
+            Success =       @{ ForegroundColor="Green" }
+            Exception =     @{ ForegroundColor="Red"; BackgroundColor="Black" }
+            Error =         @{ ForegroundColor="Red" }
+            Warning =       @{ ForegroundColor="Yellow"; BackgroundColor="Black" }
+            Info =          @{ ForegroundColor="Cyan" }
+            Result =        @{ ForegroundColor="White" }
+        }
         LogContext=$true
     }
 }
 
+function _ensureShoutOutLogFile {
+    param(
+        [string]$logFile,
+        [string]$MsgType = "*"
+    )
+
+    if (!(Test-Path $logFile -PathType Leaf)) {
+        $logDir = Split-Path $logFile -Parent
+        try {
+            return new-Item $logFile -ItemType File -ErrorAction Stop
+        } catch {
+            "Unable to create log file '{0}' for '{1}'." -f $logFile, $msgType | shoutOut -MsgType Error
+            "Messages marked with '{0}' will be redirected." -f $msgType | shoutOut -MsgType Error
+            shoutOut $_ Error
+            throw ("Unable to use log file '{0}', the file cannot be created." -f $logFile)
+        }
+    }
+
+    return gi $logFile
+}
+
+function _ensureshoutOutLogHandler {
+    param(
+        [scriptblock]$logHandler,
+        [string]$msgType = "*"
+    )
+
+    $params = $logHandler.Ast.ParamBlock.Parameters
+
+    if ($params.count -eq 0) {
+        "Invalid handler, no parameters found: {0}" -f $logHandler | shoutOut -MsgType Error
+        "Messages marked with '{0}' will not be redirected using this handler." -f $msgType | shoutOut -MsgType Error
+        throw "No parameters declared by the given handler."
+    }
+
+    $paramName = '$message'
+    $param = $params | ? { $_.Name.Extent.Text -eq $paramName }
+
+    if (!$param) {
+        "Invalid handler, no '{0}' parameter found" -f $paramName | shoutOut -MsgType Error
+        "Messages marked with '{0}' will not be redirected using this handler." -f $msgType | shoutOut -MsgType Error
+        throw ("No '{0}' parameter declared by the given handler." -f $paramName)
+    }
+
+    if (($t = $param.StaticType) -and !($t.IsAssignableFrom([String])) ) {
+        "Invalid handler, the '{0}' parameter should accept values of type [String]." -f $paramName | shoutOut -MsgType Error
+        "Messages marked with '{0}' will not be redirected using this handler." -f $msgType | shoutOut -MsgType Error
+        throw ("'{0}' parameter on the given handler is of invalid type (not assignable from [string])." -f $paramName)
+    }
+
+    return $logHandler
+}
+
 function Set-ShoutOutConfig {
-  param(
-    $ForegroundColor,
-    $LogFile,
-    $LogContext
-  )
-  
-  foreach( $k in $PSBoundParameters.Keys) {
-    $_shoutOutSettings[$k] = $PSBoundParameters[$k]
-  }
+    param(
+        [string]$DefaultMsgType,
+        [Alias("LogFile")]
+        $Log,
+        [boolean]$LogContext
+    )
+
+    if ($PSBoundParameters.ContainsKey("DefaultMsgType")) {
+        $_shoutOutSettings.DefaultMsgType = $DefaultMsgType
+    }
+
+    if ($PSBoundParameters.ContainsKey("Log")) {
+        Set-ShoutOutDefaultLog $Log | Out-Null
+    }
+
+    if ($PSBoundParameters.ContainsKey("LogContext")) {
+        $_shoutOutSettings.LogContext = $LogContext
+    }
+
 }
 
 function Get-ShoutOutConfig {
   return $_ShoutOutSettings
 }
 
+function Set-ShoutOutDefaultLog {
+    param(
+        [parameter(Mandatory=$true, ValueFromPipeline=$true, Position=1, ParameterSetName="LogFilePath")][String]$LogFilePath,
+        [parameter(Mandatory=$true, ValueFromPipeline=$true, Position=1, ParameterSetName="LogFile")][System.IO.FileInfo]$LogFile,
+        [parameter(Mandatory=$true, ValueFromPipeline=$true, Position=1, ParameterSetName="LogHandler")][scriptblock]$LogHandler
+    )
+
+    switch ($PSCmdlet.ParameterSetName) {
+        "LogFilePath" {
+            try {
+                _ensureShoutOutLogFile $LogFilePath -ErrorAction Stop | Out-Null
+                $_shoutOutSettings.DefaultLog = $LogFilePath
+            } catch {
+                return $_
+            }
+        }
+        "LogFile" {
+            try {
+                _ensureShoutOutLogFile $LogFile.FullName -ErrorAction Stop | Out-Null
+                $_shoutOutSettings.DefaultLog = $LogFile.FullName
+            } catch {
+                return $_
+            }
+        }
+        "LogHandler" {
+            try {
+                _ensureshoutOutLogHandler $LogHandler -ErrorAction Stop | Out-Null
+                $_shoutOutSettings.DefaultLog = $LogHandler
+            } catch {
+                return $_
+            }
+        }
+    }
+    
+}
+
+function Get-ShoutOutDefaultLog {
+    param()
+
+    return $script:_ShoutOutSettings.DefaultLog
+}
+
+function Set-ShoutOutRedirect {
+    [CmdletBinding()]
+    param(
+        [parameter(Mandatory=$true)][string]$msgType,
+        [Parameter(ParameterSetName="StringPath", Mandatory=$true)][string]$LogFile,
+        [Parameter(ParameterSetName="Scriptblock", Mandatory=$true)][scriptblock]$LogHandler
+    )
+
+
+    $log = $null
+    switch ($PSCmdlet.ParameterSetName) {
+    "Scriptblock" {
+            try {
+                _ensureshoutOutLogHandler $LogHandler $msgType | Out-Null
+            } catch {
+                return $_
+            }
+            $log = $LogHandler
+            break
+        }
+    "StringPath" {
+            try {
+                _ensureShoutOutLogFile $LogFile $msgType | Out-Null
+            } catch {
+                return $_
+            }
+
+            $log = $LogFile
+        }
+    }
+
+    $oldLog = $_ShoutOutSettings.DefaultLog
+    if ($_ShoutOutSettings.LogFileRedirection.ContainsKey($msgType)) {
+        $oldLog = $_ShoutOutSettings.LogFileRedirection[$msgType]
+    }
+    "Redirecting messages of type '{0}' to '{1}'." -f $msgType, ($log | Out-String) | shoutOut -MsgType $msgType
+    $_ShoutOutSettings.LogFileRedirection[$msgType] = $log
+    "Messages of type '{0}' have been redirected to '{1}'." -f $msgType, $log | shoutOut -MsgType $msgType
+}
+
+function Get-ShoutOutRedirect {
+    param(
+        [string]$msgType
+    )
+
+    return $script:_ShoutOutSettings.LogFileRedirection[$msgType]
+} 
+
+function Clear-ShoutOutRedirect {
+    param(
+        [string]$msgType
+    )
+
+    if ($_ShoutOutSettings.LogFileRedirection.ContainsKey($msgType)) {
+        $l = $_ShoutOutSettings.LogFileRedirection[$msgType]
+        "Removing message redirection for '{0}', messages of this type will be logged in the default log file ('{1}')." -f $msgType, $_ShoutOutSettings.DefaultLog | shoutOut -LogFile $l
+        $_ShoutOutSettings.LogFileRedirection.Remove($msgType)
+        "Removed message redirection for '{0}', previously messages were written to '{1}'." -f $msgType, $l | shoutOut
+    }
+}
+
 # First-things first: Logging function (is the realest, push the message and let the harddrive feel it.)
 function shoutOut {
 	param(
-		[parameter(Mandatory=$false,  position=1, ValueFromPipeline=$true)] [Object]$Message,
-		[parameter(Mandatory=$false, position=2)][String]$ForegroundColor=$null,
-		[parameter(Mandatory=$false, position=3)][String]$LogFile=$null,
+        [parameter(Mandatory=$false,  position=1, ValueFromPipeline=$true)] [Object]$Message,
+        [Alias("ForegroundColor")]
+		[parameter(Mandatory=$false, position=2)][String]$MsgType=$null,
+		[parameter(Mandatory=$false, position=3)]$Log=$null,
 		[parameter(Mandatory=$false, position=4)][Int32]$ContextLevel=1, # The number of levels to proceed up the call
                                                                          # stack when reporting the calling script.
         [parameter(Mandatory=$false)] [bool] $LogContext = (
             !$_ShoutOutSettings.ContainsKey("LogContext") -or ($_ShoutOutSettings.ContainsKey("LogContext") -and $_ShoutOutSettings.LogContext)
         ),
         [parameter(Mandatory=$false)] [Switch] $NoNewline,
-		[parameter(Mandatory=$false)] [Switch] $Quiet
+        [parameter(Mandatory=$false)] [Switch] $Quiet
 	)
     
     process {
+        $defaultLogHandler = { param($msg) $msg | Out-File $Log -Encoding utf8 -Append }
+
         # Apply global settings.
         if ( ( $settingsV = Get-Variable "_ShoutOutSettings" ) -and ($settingsV.Value -is [hashtable]) ) {
             $settings = $settingsV.Value
-            if (!$ForegroundColor -and $settings.containsKey("ForegroundColor")) { $ForegroundColor = $settings.ForegroundColor }
-            if (!$LogFile -and $settings.containsKey("LogFile")) { $LogFile = $settings.LogFile }
+            if (!$MsgType -and $settings.containsKey("DefaultMsgType")) { $MsgType = $settings.DefaultMsgType }
+            if (!$Log -and $settings.containsKey("DefaultLog")) { $Log = $settings.DefaultLog }
+            if ($settings.LogFileRedirection.ContainsKey($MsgType)) { $Log = $settings.LogFileRedirection[$MsgType] }
+            
+            if ($settings.containsKey("MsgStyles") -and ($settings.MsgStyles -is [hashtable]) -and $settings.MsgStyles.containsKey($MsgType)) {
+                $msgStyle = $settings.MsgStyles[$MsgType]
+            }
         }
 
         # Hard-coded defaults just in case.
-        if (!$ForegroundColor) { $ForegroundColor = "White" }
-        if (!$LogFile) { $LogFile = ".\setup.log" }
+        if (!$MsgType) { $MsgType = "Information" }
+        if (!$Log) { $Log = ".\setup.log" }
+        
+        if (!$msgStyle) {
+            if ($MsgType -in [enum]::GetNames([System.ConsoleColor])) {
+                $msgStyle = @{ ForegroundColor=$MsgType }
+            } else {
+                $msgStyle = @{ ForegroundColor="White" }
+            }
+        }
+        
         # Apply formatting to make output more readable.
         if ($Message -isnot [String]) {
             $message = $message | Out-String
         }
 
-        $logDir = Split-Path $LogFile -Parent
-        if (!(Test-Path $logDir)) {
-            New-Item $logDir -ItemType Directory
-        }
+	    if ([Environment]::UserInteractive -and !$Quiet) {
+            $p = @{
+                Object = $Message
+                NoNewline = $NoNewline
+            }
+            if ($msgStyle.ForegroundColor) { $p.ForegroundColor = $msgStyle.ForegroundColor }
+            if ($msgStyle.BAckgroundColor) { $p.BackgroundColor = $msgStyle.BackgroundColor }
 
-	    if ([Environment]::UserInteractive -and !$Quiet) { Write-Host -ForegroundColor $ForegroundColor -Object $Message -NoNewline:$NoNewline }
+            Write-Host @p
+        }
         
         $parentContext = if ($LogContext) {
             $cs = Get-PSCallStack
-            switch ($cs.Length) {
-                2 { "<commandline>" }
+            $csd = @($cs).Length
+            # CallStack Depth, should always be greater than or equal to 2. 1 would indicate that we
+            # are running the directly on the command line, but since we are inside the shoutOut
+            # function there should always be at least one level to the callstack in addition to the
+            # calling context.
+            switch ($csd) {
+                2 { "[{0}]<commandline>" -f $csd }
                 
                 default {
                     $parentCall = $cs[$ContextLevel]
                     if ($parentCall.ScriptName) {
-                        "{0}:{1}" -f $parentCall.ScriptName,$parentCall.ScriptLineNumber
+                        "[{0}]{1}:{2}" -f $csd, $parentCall.ScriptName,$parentCall.ScriptLineNumber
                     } else {
                         for($i = $ContextLevel; $i -lt $cs.Length; $i++) {
                             $level = $cs[$i]
@@ -80,9 +281,9 @@ function shoutOut {
                         }
 
                         if ($level.ScriptName) {
-                            "{0}:{1}\<scriptblock>" -f $level.ScriptName,$level.ScriptLineNumber
+                            "[{0}]{1}:{2}\<scriptblock>" -f $csd, $level.ScriptName,$level.ScriptLineNumber
                         } else {
-                            "<commandline>\<scriptblock>"
+                            "[{0}]<commandline>\<scriptblock>" -f $csd
                         }
                     }
                 }
@@ -90,6 +291,30 @@ function shoutOut {
         } else {
             "[context logging disabled]"
         }
-	    "$($env:COMPUTERNAME)|$parentContext@$(Get-Date -Format 'MMdd-HH:mm.ss'): $Message" | Out-File $LogFile -Encoding utf8 -Append
+
+        $createRecord = {
+            param($m)
+            "{0}|{1}|{2}|{3}|{4:yyyyMMdd-HH:mm:ss}|{5}" -f $MsgType, $env:COMPUTERNAME, $pid, $parentContext, [datetime]::Now, $m
+        }
+
+        $record = . $createRecord $Message
+
+        if ($log -is [scriptblock])  {
+            try {
+                . $Log -Message $record
+            } catch {
+                $errorMsgRecord1 = . $createRecord ("An error occurred while trying to log a message to '{0}'" -f ( $Log | Out-String))
+                $errorMsgRecord2 = . $createRecord "The following is the record that would have been written:"
+                $Log = "{0}\shoutOut.error.{1}.{2}.{3:yyyyMMddHHmmss}.log" -f $env:APPDATA, $env:COMPUTERNAME, $pid, [datetime]::Now
+                $errorRecord = . $createRecord ($_ | Out-String)
+                . $defaultLogHandler $errorMsgRecord1
+                . $defaultLogHandler $errorRecord
+                . $defaultLogHandler $errorMsgRecord2
+                . $defaultLogHandler $record
+            }
+        } else {
+            . $defaultLogHandler $record
+        }
+        
     }
 }

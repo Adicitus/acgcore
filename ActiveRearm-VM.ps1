@@ -35,6 +35,10 @@ function ActiveRearm-VM {
     $waitTimeout = 300000 #(5min)
     $waitStart = Get-Date
 
+    ###########################################################################
+    #== Start: Waiting for VMs to initialize =================================#
+    ###########################################################################
+
     # Wait for the VM to start...
     $vm = $vm | Get-VM
     while ($vm.Heartbeat -notlike "OK*") {
@@ -66,86 +70,111 @@ function ActiveRearm-VM {
     if ( !$netAdapterTimedout ) {
         shoutOut "All adapter initialized! (waited ${timeWaited}ms, $($_.Status))" Green
     }
-    $ipaddresses = $vmadapters | % { $_.IPAddresses }
-    shoutOut "Got the following IP addresses: $($ipaddresses -join ", ")"
-
-    $activeAddresses = $ipaddresses | ? {
-        shoutOut "Testing '$_'... " cyan -NoNewline
-        # Some VMs don't seem to respond to the link-assigned address.
-        # This may be because of a firewall configuration, or it might be a timing issue.
-        # To lessen the probability of a timing miss, we rerun the test 3 times with a bit
-        # of a delay in-between.
-        for ($i = 1; $i -lt 4; $i++) {
-            shoutOut "$i " -NoNewline
-            $ping = Get-WmiObject -Query "Select * from Win32_PingStatus Where Address='$_'"
-            if ($ping.StatusCode -eq 0) {
-                shoutOut "Contact!" Green 
-                return $true
-            }
-            sleep -Milliseconds 300
-        }
-        shoutOut "No contact!" Red
-        $false
-    }
-
-    shoutOut "Active addresses: $($activeAddresses -join ", ")"
+    
+    ###########################################################################
+    #== End: Waiting for VMs to initialize ===================================#
+    ###########################################################################
 
     $successfulConnection = $false
 
-    $activeAddresses | % {
-        if ($successfulConnection) { return }
-        shoutOut "Attempting to connect using IP-Address ($_)..." Cyan
-        $address = $_
-        shoutOut "Connecting to '$address'..." Cyan
+    ###########################################################################
+    #== Start: trying to connect using VMName ================================#
+    ###########################################################################
+
+    if (Get-Command "Invoke-Command" | ? { $_.Parameters.Keys.Contains("VMName") }) { # Newer versions of Windows allow WinRM connections via VMName, so this is our backup.
+        shoutOut "Trying to connect using VM name..." Cyan
         $Credentials | % {
             if ($successfulConnection) { return }
             $credential = $_
-            $session = $null
-            try {
-                $session = New-PSSession -ComputerName $address -Credential $_ -ErrorAction Stop
-
+            $r = { Invoke-Command -VMName $vm.VMName -Credential $_ -FilePath $RearmScriptFile } | Run-Operation 
+            if ( ($r -is [System.Management.Automation.ErrorRecord]) ) {
+                shoutOut "Unable to connect to '$($vm.VMname)' with credentials for '$($credential.Username)'" Red
+            } else {
                 shoutOut "Connected successfully using credentials for '$($credential.Username)'!" Green
                 $successfulConnection = $true
-            } catch {
-                shoutOut "Unable to connect with credentials for '$($credential.Username)'!" Red
-                shoutOut "`t| $($_)" White
-            }
-
-            if ($session) {
-                shoutOut "Performing rearm..." Cyan
-                $r = { Invoke-Command -Session $session -FilePath $RearmScriptFile -ErrorAction stop } | Run-Operation
-                if($r -isnot [System.Management.Automation.ErrorRecord]) {
-                    shoutOut "Finished running rearm snippet!" Green
-                } else {
-                    shoutOut "Failed to run Rearm snippet!" Red
-                }
-            }
-
-            if ($session ) {
-                if ($session.State -in "Opened") {
-                    $session | Disconnect-PSSession -Confirm:$false | Out-Null
-                }
-                    $session | Remove-PSSession -Confirm:$false -ErrorAction SilentlyContinue | Out-Null
             }
         }
+    } else {
+        shoutOut "Unable to connect using VMName (Parameter 'VMName' is unavailable on Invoke-Comand)." Yellow
     }
-        
-    if (!$successfulConnection) {
-        shoutOut "Unable to connect to '$($vm.VMName)' using IP!" Red
-        if (Get-Command "Invoke-Command" | ? { $_.Parameters.Keys.Contains("VMName") }) { # Newer versions of Windows allow WinRM connections via VMName, so this is our backup.
-            shoutOut "Trying to connect using VM name..." Cyan
+
+    ###########################################################################
+    #== End: Trying to connect using VMName ==================================#
+    ###########################################################################
+
+    
+    if (!$successfulConnection) { # Fallback clause...
+        shoutOut "Attempting to connect to '$($vm.VMName)' using IP..." Cyan
+
+        #######################################################################
+        #== Start: Attempt to connect using IP-address =======================#
+        #######################################################################
+
+        $ipaddresses = $vmadapters | % { $_.IPAddresses }
+        shoutOut "Got the following IP addresses: $($ipaddresses -join ", ")"
+
+        $activeAddresses = $ipaddresses | ? {
+            shoutOut "Testing '$_'... " cyan -NoNewline
+            # Some VMs don't seem to respond to the link-assigned address.
+            # This may be because of a firewall configuration, or it might be a timing issue.
+            # To lessen the probability of a timing miss, we rerun the test 3 times with a bit
+            # of a delay in-between.
+            for ($i = 1; $i -lt 4; $i++) {
+                shoutOut "$i " -NoNewline
+                $ping = Get-WmiObject -Query "Select * from Win32_PingStatus Where Address='$_'"
+                if ($ping.StatusCode -eq 0) {
+                    shoutOut "Contact!" Green 
+                    return $true
+                }
+                sleep -Milliseconds 300
+            }
+            shoutOut "No contact!" Red
+            $false
+        }
+
+        shoutOut "Active addresses: $($activeAddresses -join ", ")"
+
+        $activeAddresses | % {
+            if ($successfulConnection) { return }
+            shoutOut "Attempting to connect using IP-Address ($_)..." Cyan
+            $address = $_
+            shoutOut "Connecting to '$address'..." Cyan
             $Credentials | % {
                 if ($successfulConnection) { return }
                 $credential = $_
-                $r = { Invoke-Command -VMName $vm.VMName -Credential $_ -FilePath $RearmScriptFile } | Run-Operation 
-                if ( ($r -is [System.Management.Automation.ErrorRecord]) ) {
-                    shoutOut "Unable to connect to '$($vm.VMname)' with credentials for '$($credential.Username)'" Red
-                } else {
+                $session = $null
+                try {
+                    $session = New-PSSession -ComputerName $address -Credential $_ -ErrorAction Stop
+
                     shoutOut "Connected successfully using credentials for '$($credential.Username)'!" Green
                     $successfulConnection = $true
+                } catch {
+                    shoutOut "Unable to connect with credentials for '$($credential.Username)'!" Red
+                    shoutOut "`t| $($_)" White
+                }
+
+                if ($session) {
+                    shoutOut "Performing rearm..." Cyan
+                    $r = { Invoke-Command -Session $session -FilePath $RearmScriptFile -ErrorAction stop } | Run-Operation
+                    if($r -isnot [System.Management.Automation.ErrorRecord]) {
+                        shoutOut "Finished running rearm snippet!" Green
+                    } else {
+                        shoutOut "Failed to run Rearm snippet!" Red
+                    }
+                }
+
+                if ($session ) {
+                    if ($session.State -in "Opened") {
+                        $session | Disconnect-PSSession -Confirm:$false | Out-Null
+                    }
+                    $session | Remove-PSSession -Confirm:$false -ErrorAction SilentlyContinue | Out-Null
                 }
             }
         }
+
+        #######################################################################
+        #== End: Trying to connect using IP-address ==========================#
+        #######################################################################
     }
 
     if (!$successfulConnection) {
