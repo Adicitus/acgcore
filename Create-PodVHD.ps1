@@ -86,10 +86,16 @@ function Create-PodVHD {
             Write-Host "Deduplication feature not installed!" -ForegroundColor Red
         }
     }
-    
+
     Write-host "Adding source system information (source.info)... " -NoNewline
     $path = Find-VolumePath $volume
+
+    # Occasionaly the script fails here because the script is unable to find
+    # the path to the mounted volume. Doing a test-path seems to solve this.
+    $null = Test-Path $Path
+
     $sysinfopath = "$path\source.info"
+    Write-Host $sysinfopath
 
     "Source system:" >> $sysinfopath
     systeminfo | % { " $_" } >> $sysinfopath
