@@ -1,7 +1,5 @@
 ﻿# Set-VMVHDAccessRights.ps1
 
-. "$PSScriptRoot\ShoutOut.ps1"
-
 # Set access rights for all VHDs on the VMs with names like the give pattern.
 function Set-VMVHDAccessRights {
     param(

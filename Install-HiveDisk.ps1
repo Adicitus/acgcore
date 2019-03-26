@@ -1,5 +1,4 @@
-﻿. "$PSScriptRoot\ShoutOut.ps1"
-. "$PSScriptRoot\Run-Operation.ps1"
+﻿. "$PSScriptRoot\Run-Operation.ps1"
 . "$PSScriptRoot\RegexPatterns.ps1"
 . "$PSScriptRoot\Parse-ConfigFile.ps1"
 . "$PSScriptRoot\Find-VolumePath.ps1"

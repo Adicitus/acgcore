@@ -1,6 +1,4 @@
-﻿
-. "$PSScriptRoot\ShoutOut.ps1"
-. "$PSScriptRoot\Run-Operation.ps1"
+﻿. "$PSScriptRoot\Run-Operation.ps1"
 . "$PSScriptRoot\Set-ProcessPrivilege.ps1"
 
 <#

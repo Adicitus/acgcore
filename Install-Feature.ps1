@@ -1,6 +1,4 @@
-﻿. "$PSScriptRoot\ShoutOut.ps1"
-
-function Install-Feature ($featureName){
+﻿function Install-Feature ($featureName){
     
     if ( (Get-Command Get-WindowsFeature -ErrorAction SilentlyContinue) -and ($r = Get-WindowsFeature -Name $featureName) ) {
         shoutOut "Using Server Manager... " Cyan -NoNewline

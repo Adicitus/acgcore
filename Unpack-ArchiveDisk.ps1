@@ -1,5 +1,4 @@
-﻿. "$PSScriptRoot\ShoutOut.ps1"
-. "$PSScriptRoot\Run-Operation.ps1"
+﻿. "$PSScriptRoot\Run-Operation.ps1"
 . "$PSScriptRoot\Find-VolumePath.ps1"
 . "$PSScriptRoot\Unpack-RARFile.ps1"
 

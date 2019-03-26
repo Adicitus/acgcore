@@ -1,6 +1,4 @@
 ﻿
-. "$PSScriptRoot\ShoutOut.ps1"
-
 <#
 .WISHLIST
     - Update so that that output is fed to shoutOut as it is generated rather than using the result output.
