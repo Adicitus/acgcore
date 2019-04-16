@@ -18,9 +18,7 @@ function Run-Operation {
         [parameter()][Switch] $OutNull,
         [parameter()][Switch] $NotStrict
     )
-    $color = "White"
-    
-    shoutOut "Running '$Operation'..." Cyan -ContextLevel 2
+    $color = "Result"
     
     if (!$NotStrict) {
         # Switch error action preference to catch any errors that might pop up.
@@ -29,20 +27,31 @@ function Run-Operation {
         $ErrorActionPreference = [System.Management.Automation.ActionPreference]::Stop
     }
 
+    $msg = "Running '$Operation'..."
+    $msg | shoutOut -MsgType Info -ContextLevel 1
+
     $r = try {
+        
         if ($Operation -is [scriptblock]) {
             # Under certain circumstances the iex cmdlet will not allow
             # the evaluation of ScriptBlocks without an input. However it will evaluate strings
             # just fine so we perform the transformation before evaluation.
             $Operation = $Operation.ToString()
         }
-        Invoke-Expression $Operation | % { shoutOut "`t| $_" $color -ContextLevel 3; $_ } # Invoke-Expression allows us to receive
+        Invoke-Expression $Operation | % { shoutOut "`t| $_" $color -ContextLevel 2; $_ } # Invoke-Expression allows us to receive
                                                                             # and handle output as it is generated,
                                                                             # rather than wait for the operation to finish
                                                                             # as opposed to <[scriptblock]>.invoke().
     } catch {
-        $color = "Red"
-        $_ | % { shoutOut "`t| $_" $color -ContextLevel 3 }
+        $color = "Error"
+        "An error occured while executing the operation:" | shoutOUt -MsgType Error -ContextLevel 1
+
+        $_.Exception, $_.CategoryInfo, $_.InvocationInfo | Out-string | % {
+            $_.Split("`n`r", [System.StringSplitOptions]::RemoveEmptyEntries).TrimEnd("`n`r")
+        } | % {
+            shoutOut "`t| $_" $color -ContextLevel 2
+        }
+
         $_
     }
 
