@@ -6,6 +6,11 @@
       [Done]
 .SYNOPSIS
     Helper function to execute commands (strings or blocks) with error-handling/reporting.
+.DESCRIPTION
+    Helper function to execute commands (strings or blocks) with error-handling/reporting.
+If a scriptblock is passed as the operation, the function will attempt make any variables referenced by the
+scriptblock available to the scriptblock when it is resolved (using variables available in the scope that
+called Run-Operation).
 .NOTES
    - Transforms ScriptBlocks to Strings prior to execution because of a quirk in iex where it will not allow the
      evaluation of ScriptBlocks without an input (a 'param' statement in the block). iex is used because it yields
@@ -32,16 +37,54 @@ function Run-Operation {
 
     $r = try {
         
+        # Step 1: Get any variables in the parent scope that are referenced by the operation. 
+        $localVarNames = Get-variable -Scope 0 | % Name
+
+        if ($Operation -is [scriptblock]) {
+            $variableNames = $Operation.Ast.FindAll(
+                {param($o) $o -is [System.Management.Automation.Language.VariableExpressionAst]},
+                $true
+            ) | % {
+                $_.VariablePath.UserPath
+            } | ? {
+                $_ -notin $localVarNames
+            }
+
+            $variables = foreach ($vn in $variableNames) {
+                $PSCmdlet.SessionState.PSVariable.Get($vn)
+            }
+        }
+
+        # Step 2: Convert the scriptblock if necessary.
         if ($Operation -is [scriptblock]) {
             # Under certain circumstances the iex cmdlet will not allow
             # the evaluation of ScriptBlocks without an input. However it will evaluate strings
             # just fine so we perform the transformation before evaluation.
             $Operation = $Operation.ToString()
         }
-        Invoke-Expression $Operation | % { shoutOut "`t| $_" $color -ContextLevel 2; $_ } # Invoke-Expression allows us to receive
-                                                                            # and handle output as it is generated,
-                                                                            # rather than wait for the operation to finish
-                                                                            # as opposed to <[scriptblock]>.invoke().
+
+        # Step 3: inject the operation and the variables into a new isolated scope and resolve
+        # the operation there.
+        & {
+            param(
+                $thisOperation,
+                $inVariables
+            )
+
+            foreach ($v in $inVariables) {
+                if ($null -eq $v) { continue }
+                Set-Variable $v.Name $v.Value
+            }
+
+            # Invoke-Expression allows us to receive
+            # and handle output as it is generated,
+            # rather than wait for the operation to finish
+            # as opposed to <[scriptblock]>.invoke().
+            Invoke-Expression $thisOperation | % {
+                shoutOut "`t| $_" "White" -ContextLevel 2; $_
+            }
+        } $Operation $variables
+
     } catch {
         $color = "Error"
         "An error occured while executing the operation:" | shoutOUt -MsgType Error -ContextLevel 1
