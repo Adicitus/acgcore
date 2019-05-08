@@ -11,3 +11,35 @@ $Script:RegexPatterns.File = ( '(?<file>(?<directory>((?<root>[A-Z]+:|\.|\\.*)[\
 $Script:RegexPatterns.IPv4Address = "($IPv4AB\.){3}$($IPv4AB)"
 $Script:RegexPatterns.IPv4Netmask = "((255\.){3}$IPv4NMB)|((255\.){2}($IPv4NMB\.)0)|((255\.){1}($IPv4NMB\.)0\.0)|(($IPv4NMB\.)0\.0\.0)|0\.0\.0\.0"
 $Script:RegexPatterns.GUID = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{10}"
+
+function Get-ACGCoreRegexPattern {
+    param($PatternName)
+
+    if ($Script:RegexPatterns.ContainsKey($PatternName)) {
+        return $Script:RegexPatterns[$PatternName]
+    } else {
+        throw "Invalid pattern name provided"
+    }
+}
+
+function Get-ACGCoreRegexPatternNames {
+
+    return $Script:RegexPatterns.Keys
+}
+
+function Test-ACGCoreRegexPattern {
+    param($value, $patternName)
+
+    try {
+        $pattern = Get-ACGCoreRegexPattern $patternName
+        
+        if ($value -match $pattern) {
+            return $matches.Clone()
+        }
+
+        return $false
+    } catch {
+        return $false
+    }
+
+}
