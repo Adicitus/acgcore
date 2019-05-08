@@ -97,6 +97,8 @@ function Create-PodVHD {
     $sysinfopath = "$path\source.info"
     Write-Host $sysinfopath
 
+    Get-Volume | Out-Null
+
     "Source system:" >> $sysinfopath
     systeminfo | % { " $_" } >> $sysinfopath
     Write-Host "Done!" -ForegroundColor Green
