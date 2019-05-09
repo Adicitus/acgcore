@@ -32,6 +32,10 @@ function Run-Operation {
         $ErrorActionPreference = [System.Management.Automation.ActionPreference]::Stop
     }
 
+    if ($Operation -is [string]) {
+        $OPeration = [scriptblock]::create($Operation)
+    }
+
     $msg = "Running '$Operation'..."
     $msg | shoutOut -MsgType Info -ContextLevel 1
 
