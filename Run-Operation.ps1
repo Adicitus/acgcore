@@ -89,7 +89,7 @@ function Run-Operation {
         $color = "Error"
         "An error occured while executing the operation:" | shoutOUt -MsgType Error -ContextLevel 1
 
-        $_.Exception, $_.CategoryInfo, $_.InvocationInfo | Out-string | % {
+        $_.Exception, $_.CategoryInfo, $_.InvocationInfo, $_.ScriptStackTrace | Out-string | % {
             $_.Split("`n`r", [System.StringSplitOptions]::RemoveEmptyEntries).TrimEnd("`n`r")
         } | % {
             shoutOut "`t| $_" $color -ContextLevel 2
