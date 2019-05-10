@@ -99,20 +99,24 @@ function Create-PodVHD {
 
     Get-Volume | Out-Null
 
-    "Source system:" >> $sysinfopath
-    systeminfo | % { " $_" } >> $sysinfopath
+
+    [System.IO.File]::WriteAllLines($sysinfopath, "Source system:")
+    $sysinfo = systeminfo
+    [System.IO.File]::AppendAllLines($sysinfopath, [string[]]$sysinfo)
     Write-Host "Done!" -ForegroundColor Green
 
     Write-host "Hiding source.info... "-NoNewline
-    Get-Item $sysinfopath | Set-ItemProperty -Name Attributes -Value ([System.IO.FileAttributes]::Hidden)
+    [System.IO.File]::setAttributes($sysinfopath, [System.IO.FileAttributes]::Hidden)
+    # Get-Item $sysinfopath | Set-ItemProperty -Name Attributes -Value ([System.IO.FileAttributes]::Hidden)
     Write-Host "Done!" -ForegroundColor Green
 
     try {
         Write-Host "Setting access rights for the volume... " -NoNewline
-        $acl = Get-Acl $Path
-        $ar = New-Object System.Security.AccessControl.FileSystemAccessRule("Everyone", "FullControl", "Allow")
-        $acl.SetAccessRule($ar)
-        Set-Acl $path $acl
+        $acl = [System.IO.Directory]::getAccessControl($Path)
+        $ar = New-Object System.Security.AccessControl.FileSystemAccessRule("Everyone", "FullControl", 3, 2, "Allow")
+        
+        $acl.addAccessRule($ar)
+        [System.IO.Directory]::setAccessControl($path, $acl)
         Write-Host "Done!" -ForegroundColor Green
     } catch {
         Write-Host "Failed!" -ForegroundColor Red
