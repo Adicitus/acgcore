@@ -243,21 +243,18 @@ function Install-HiveDisk{
             $options = New-ScheduledJobOption -RunElevated -MultipleInstancePolicy IgnoreNew -StartIfOnBattery
             $block = {
                 param($vhdPath)
-                $logName = "$vhdPath.mount.log"
+                $logFile = "$vhdPath.mount.log"
 				
 				try {
 					Import-Module ACGCore -ErrorAction Stop
 				} catch {
-					"{0:yyyyMMdd-HHmmss}: Unable to import the 'ACGCore' module!" -f [datetime]::now >> $logName
-					$_ >> $logName
+					"{0:yyyyMMdd-HHmmss}: Unable to import the 'ACGCore' module!" -f [datetime]::now >> $logFile
+					$_ >> $logFile
 					return
 				}
 				
 				Set-ShoutOutConfig -LogFile $logFile
 				
-                if (!(Test-Path "C:\temp" -PathType Directory )) {
-                    mkdir C:\temp
-                }
 				$vhd = Get-VHD $vhdPath
                 "{0:yyyyMMdd-HHmmss}: Attempting to mount '{1}'..." -f [datetime]::now, $vhdPath | shoutOut
 				
