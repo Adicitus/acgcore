@@ -105,7 +105,7 @@ function Install-HiveDisk{
 
         $conf = @{}
 
-        if (Test-Path "${driveRoot}hive.ini") {
+        if ( [System.IO.File]::Exists("${driveRoot}hive.ini") ) {
             shoutOut "Partition contains a hive configuration file, parsing..."
             $conf = Parse-ConfigFile "$driveRoot\hive.ini"
             shoutOut "Done!" Green
