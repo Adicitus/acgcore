@@ -62,7 +62,7 @@ function Install-HiveDisk{
     )
 
     if ( !(Get-Module Hyper-V -ListAvailable )) {
-        ShoutOut "Unable to install, no 'Hyper-V' module available (install relies on VHD cmdlets)!" Yellow
+        ShoutOut "Unable to install, no 'Hyper-V' module available (install relies on VHD cmdlets)!" Warning
         return
     } 
 
@@ -70,26 +70,26 @@ function Install-HiveDisk{
 
     $image = { $podPath | Get-VHD } | Run-Operation
     if (!$image -or $image -is [System.Management.Automation.ErrorRecord]) {
-        shoutOut "Could not open '$podPath' as a VHD!" Red
+        shoutOut "Could not open '$podPath' as a VHD!" Error
         return
     }
 
     if (!$image.Attached) {
-        shoutOut "Mounting '$podPath'" Cyan
+        shoutOut "Mounting '$podPath'" Info
         $image | Mount-VHD
         $image = $image | Get-VHD
     }
 
     $disk = $image | Get-Disk
 
-    shoutOut ("Mounted as disk #{0}..." -f $disk.Number ) Cyan
+    shoutOut ("Mounted as disk #{0}..." -f $disk.Number ) Info
 
     $partitions = $disk | Get-Partition
 
-    shoutOut ("Found {0} partitions..." -f @($partitions).Count ) Cyan
+    shoutOut ("Found {0} partitions..." -f @($partitions).Count ) Info
 
     $partitions | % {
-        shoutOut ("Inspecting partition {0}" -f $_.PartitionNumber) Cyan
+        shoutOut ("Inspecting partition {0}" -f $_.PartitionNumber) Info
         $partition = $_
         $volume = $Partition | Get-Volume
         $volumePath = Find-VolumePath $volume
@@ -101,7 +101,7 @@ function Install-HiveDisk{
         if ($volumePath -notmatch "[\\/]$") { $volumePath += "\" }
 
         $driveRoot = $volumePath # "$($partition.DriveLetter):\"
-        shoutOut "`$driveRoot='$driveRoot'" Cyan
+        shoutOut "`$driveRoot='$driveRoot'" Info
 
         $conf = @{}
 
@@ -116,7 +116,7 @@ function Install-HiveDisk{
                 $iconf.DriveLetter | ? {
                     $valid = $_ -match "^[D-Z]$"
                     if (!$valid) {
-                        shoutOut "Invalid Drive Letter: '$_' (Note: A, B, and C are reserved and cannot be used)" Red
+                        shoutOut "Invalid Drive Letter: '$_' (Note: A, B, and C are reserved and cannot be used)" Error
                         return $false
                     }
                     if ($_ -eq $partition.DriveLetter) {
@@ -136,7 +136,7 @@ function Install-HiveDisk{
             if ($iconf.MountPoint) {
                 $iconf.MountPoint | % {
                     if ( $_ -notmatch $RegexPatterns.Directory ) {
-                        shoutOut "Mount point specification does not match the expected format for a directory: '$_'" Red
+                        shoutOut "Mount point specification does not match the expected format for a directory: '$_'" Error
                         return
                     }
 
@@ -166,7 +166,7 @@ function Install-HiveDisk{
                     $w32_volume = gwmi -query "select * From Win32_Volume Where DeviceID='$id'"
                 
                     if (!$w32_volume) {
-                        shoutOut "Unable to get Win32_Volume instance for the hive! Unable to assign mountpoint" Red
+                        shoutOut "Unable to get Win32_Volume instance for the hive! Unable to assign mountpoint" Error
                         return
                     }
 
@@ -190,7 +190,7 @@ function Install-HiveDisk{
                             $link = $Matches.directory
                         }
                         default {
-                            shoutOut "Invalid Symlink path: '$_'" Red
+                            shoutOut "Invalid Symlink path: '$_'" Error
                             return
                         }
                     }
@@ -209,7 +209,7 @@ function Install-HiveDisk{
                                 $target = $Matches.directory
                             }
                             default {
-                                shoutOut "No target specified/recognized, using default target '$driveRoot'..." Yellow
+                                shoutOut "No target specified/recognized, using default target '$driveRoot'..." Warning
                                 $target = $defaultTarget
                             }
                         }
@@ -232,12 +232,12 @@ function Install-HiveDisk{
 
         $jobName = "MountHive($($File.Name))"
         if ($t = Get-ScheduledJob | ? {$_.Name -eq $jobName}) {
-            shoutOut "Found a startup task for this hive, removing it.... " Cyan -NoNewline
+            shoutOut "Found a startup task for this hive, removing it.... " Info -NoNewline
             $t | Unregister-ScheduledJob -Confirm:$false
             shoutOut "Done!" Green
         }
 
-        shoutOut "Adding startup job to mount the hive... " Cyan -NoNewline
+        shoutOut "Adding startup job to mount the hive... " Info -NoNewline
         {
             $trigger = New-JobTrigger -AtStartup
             $options = New-ScheduledJobOption -RunElevated -MultipleInstancePolicy IgnoreNew -StartIfOnBattery
