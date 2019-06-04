@@ -165,17 +165,17 @@ function Parse-ConfigFile {
 
     $Verbose = if (($Verbose -or $Loud) -and !$Silent) { $true } else { $false }
 	
-    if($Path -and (Test-Path $Path -PathType Leaf)) {
-        $lines = Get-Content $Path -Encoding UTF8
+    if( $Path -and ([System.IO.File]::Exists($Path)) ) {
+        $lines = [System.IO.File]::ReadAllLines($Path, [System.Text.Encoding]::UTF8)
     } else {
         . $handleError -Message "<InvalidPath>The given path doesn't lead to an existing file: '$Path'"
         return
     }
 
-    $Item = Get-Item $Path -Force # Without -Force, Get-Item will generate an error for hidden files.
+    $currentDir = [System.IO.Directory]::GetParent($Path)
 
     if (!$PSBoundParameters.ContainsKey("IncludeRootPath")) {
-        $IncludeRootPath = $Item.DirectoryName
+        $IncludeRootPath = $currentDir
     }
 
     $conf = @{}
@@ -223,7 +223,7 @@ function Parse-ConfigFile {
                     if ($includePath -match "^[/\\]") {
                         $parseArgs.Path = "$IncludeRootPath${includePath}.ini" # Absolute path.
                     } else {
-                        $parseArgs.Path = "$($Item.DirectoryName)\${includePath}.ini"; # Relative path.
+                        $parseArgs.Path = "$currentDir\${includePath}.ini"; # Relative path.
                     }
 
                     if ($PSBoundParameters.ContainsKey("Verbose")) { $parseArgs.Verbose = $Verbose }
@@ -248,7 +248,7 @@ function Parse-ConfigFile {
                     if ($_.Exception -like "<InvalidPath>*") {
                         . $handleError -Message $_
                     } else {
-                        . $handleError "An unknown exception occurred while parsing the include file at '$($Item.DirectoryName)\${includePath}.ini' (in root file '$Path'): $_"
+                        . $handleError "An unknown exception occurred while parsing the include file at '$currentDir\${includePath}.ini' (in root file '$Path'): $_"
                     }
                 }
 
