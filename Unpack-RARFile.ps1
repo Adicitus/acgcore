@@ -9,12 +9,17 @@ function Unpack-RARFile{
 	)
 	
 	if ($Path) {
-        $File = Get-Item $Path
+        $File = [System.IO.FileInfo]::New($Path)
+    }
+
+    if (-not $File.Exists) {
+        "The provided file does not säeem to exist on the system ('{0}')." -f $File.FullName | shoutOut -MsgType Error
+        return
     }
     
-    shoutOut "Looking to unpack '$($File.FullName)'..." Cyan
+    shoutOut "Looking to unpack '$($File.FullName)'..." Info
     
-    shoutOut "Checking for an archive comment..." Cyan -NoNewline
+    shoutOut "Checking for an archive comment..." Info -NoNewline
     $comment = & $UnRARPath v "$($File.FullName)"
     
     if (!$Destination) {
@@ -22,10 +27,10 @@ function Unpack-RARFile{
         $path = $path  -replace '^[a-z]:','C:' # MOCSetup compatibility, should probably be a setting.
 
         if  (!$path){
-            shoutOut "Didn't find a 'Path' directive in the comment, falling back on 'C:\'" Yellow
+            shoutOut "Didn't find a 'Path' directive in the comment, falling back on 'C:\'" Warning
             $path = "C:"
         } else {
-            shoutOut "Found a 'Path' directive, using '$Path'" Green
+            shoutOut "Found a 'Path' directive, using '$Path'" Success
         }
         $Destination = $path -replace "[\\/]$",""
     } else {
