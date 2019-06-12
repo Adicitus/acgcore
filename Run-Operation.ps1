@@ -75,9 +75,9 @@ function Run-Operation {
                 $inVariables
             )
 
-            foreach ($v in $inVariables) {
-                if ($null -eq $v) { continue }
-                Set-Variable $v.Name $v.Value
+            foreach ($__ in $inVariables) {
+                if ($null -eq $__) { continue }
+                Set-Variable $__.Name $__.Value
             }
 
             # Invoke-Expression allows us to receive
