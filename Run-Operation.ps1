@@ -11,6 +11,14 @@
 If a scriptblock is passed as the operation, the function will attempt make any variables referenced by the
 scriptblock available to the scriptblock when it is resolved (using variables available in the scope that
 called Run-Operation).
+
+The variables used in the command are identified using [scriptblock].Ast.FindAll method, and are imported
+from the parent scope using $PSCmdlet.SessionState.PSVariable.Get.
+
+The following variable-names are restricted and may cause errors if they are used in the operation:
+ - $__thisOperation: The operation being run.
+ - $__inputVariables: List of the variables being imported to run the operation.
+
 .NOTES
    - Transforms ScriptBlocks to Strings prior to execution because of a quirk in iex where it will not allow the
      evaluation of ScriptBlocks without an input (a 'param' statement in the block). iex is used because it yields
@@ -72,19 +80,29 @@ function Run-Operation {
         & {
             param(
                 $thisOperation,
-                $inVariables
+                $inputVariables
             )
 
-            foreach ($__ in $inVariables) {
+            $__thisOperation = $thisOperation
+            $__inputVariables = $inputVariables
+
+            Remove-Variable "thisOperation"
+            Remove-Variable "inputVariables"
+
+            $__ = $null
+
+            foreach ( $__ in $__inputVariables ) {
                 if ($null -eq $__) { continue }
                 Set-Variable $__.Name $__.Value
             }
+
+            Remove-Variable "__"
 
             # Invoke-Expression allows us to receive
             # and handle output as it is generated,
             # rather than wait for the operation to finish
             # as opposed to <[scriptblock]>.invoke().
-            Invoke-Expression $thisOperation | % {
+            Invoke-Expression $__thisOperation | % {
                 shoutOut "`t| $_" "White" -ContextLevel 2; $_
             }
         } $Operation $variables
