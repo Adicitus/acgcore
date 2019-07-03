@@ -95,6 +95,7 @@ function ActiveRearm-VM {
                 shoutOut "Unable to connect to '$($vm.VMname)' with credentials for '$($credential.Username)'" Red
             } else {
                 shoutOut "Connected successfully using credentials for '$($credential.Username)'!" Green
+                shoutOut $r Result
                 $successfulConnection = $true
             }
         }
@@ -162,6 +163,7 @@ function ActiveRearm-VM {
                     $r = { Invoke-Command -Session $session -FilePath $RearmScriptFile -ErrorAction stop } | Run-Operation
                     if($r -isnot [System.Management.Automation.ErrorRecord]) {
                         shoutOut "Finished running rearm snippet!" Green
+                        shoutOut $r Result
                     } else {
                         shoutOut "Failed to run Rearm snippet!" Red
                     }
