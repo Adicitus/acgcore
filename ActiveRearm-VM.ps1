@@ -9,13 +9,17 @@ function ActiveRearm-VM {
         $RearmScriptFile = "$PSScriptRoot\Snippets\Rearm.ps1"
     )
 
+    trap {
+        shoutOut $_
+    }
+
     shoutOut ("Attempting Active Rearm: $($vm.VMName) ".PadRight(80,'=')) Magenta
 
     $cleanupClosure = { # Performing cleanup in a separate step so that we don't need to replicate the code in the main step.
         param($vm)
         shoutOut "Shutting down '$($vm.VMName)'..." Cyan -NoNewline
         try {
-            $vm | Stop-VM
+            $vm | Stop-VM -Force
             shoutOut "Done!" Green 
         } catch {
             shoutOut "Failed!" Red
