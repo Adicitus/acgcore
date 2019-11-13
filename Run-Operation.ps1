@@ -29,7 +29,8 @@ function Run-Operation {
     param(
         [parameter(ValueFromPipeline=$true, position=1)] $Operation,
         [parameter()][Switch] $OutNull,
-        [parameter()][Switch] $NotStrict
+        [parameter()][Switch] $NotStrict,
+        [parameter()][Switch] $LogErrorsOnly
     )
     $color = "Result"
     
@@ -44,8 +45,10 @@ function Run-Operation {
         $OPeration = [scriptblock]::create($Operation)
     }
 
-    $msg = "Running '$Operation'..."
-    $msg | shoutOut -MsgType Info -ContextLevel 1
+    if (!$LogErrorsOnly) {
+        $msg = "Running '$Operation'..."
+        $msg | shoutOut -MsgType Info -ContextLevel 1
+    }
 
     $r = try {
         
@@ -102,8 +105,11 @@ function Run-Operation {
             # and handle output as it is generated,
             # rather than wait for the operation to finish
             # as opposed to <[scriptblock]>.invoke().
-            Invoke-Expression $__thisOperation | % {
-                shoutOut "`t| $_" "White" -ContextLevel 2; $_
+            Invoke-Expression $__thisOperation | ForEach-Object {
+                if (!$LogErrorsOnly) {
+                    shoutOut "`t| $_" "Result" -ContextLevel 2;
+                }
+                return $_
             }
         } $Operation $variables
 
