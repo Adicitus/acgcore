@@ -52,6 +52,8 @@ function Render-Template{
         [hashtable]$values
     )
 
+    $TemplateDir = $templatePath | Split-Path -Parent
+
     $values.GetEnumerator() |% {
             New-Variable $_.Name $_.Value
     }
