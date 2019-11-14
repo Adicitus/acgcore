@@ -53,6 +53,7 @@ probably be handled as a closure or a function passed in via the $values paramet
 
 #>
 function Render-Template{
+    [CmdletBinding()]    
     param(
         [parameter(
             Mandatory=$true,
@@ -73,13 +74,21 @@ function Render-Template{
 
 
     if ($null -eq $Cache) { 
-        try {
-            # Check if this is a recursive call, if so we should try to reuse the cache.
-            $cacheVar = $PSCmdlet.SessionState.PSVariable.Get("__RenderCache")
-            $Cache = $cacheVar.Value
-        } catch {
-            $Cache = @{}
+        
+        Write-Debug "Looking for cache..."
+        # Check if this is a recursive call, if so we should try to reuse the cache.
+        $cacheVar = $PSCmdlet.SessionState.PSVariable.Get("__RenderCache")
+        $cacheVar | Out-String | Write-Host
+        $Cache = $cacheVar.Value
+
+        if ($cache) {
+            Write-Debug "Found cache in parent context."
         }
+    }
+
+    if ($null -eq $cache) {
+        Write-Debug "Failed to get cache from parent. Creating new cache."
+        $Cache = @{}
     }
 
     $template = $null
