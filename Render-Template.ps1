@@ -73,17 +73,23 @@ function Render-Template{
     )
 
 
+	if ($Cache) {
+		Write-Debug "Cache provided by caller, updating global."
+		$script:__RenderCache = $Cache
+	}
+
     if ($null -eq $Cache) { 
         
         Write-Debug "Looking for cache..."
-        # Check if this is a recursive call, if so we should try to reuse the cache.
-        $cacheVar = $PSCmdlet.SessionState.PSVariable.Get("__RenderCache")
-        $cacheVar | Out-String | Write-Host
-        $Cache = $cacheVar.Value
+        
+		if ($Cache = $script:__RenderCache) {
+			Write-Debug "Using global cache."
+		} elseif ($cacheVar = $PSCmdlet.SessionState.PSVariable.Get("__RenderCache")) {
+			# This is a recursive call, we can reuse the cache from parent.
+			$Cache = $cacheVar.Value
+			Write-Debug "Found cache in parent context."
+		}
 
-        if ($cache) {
-            Write-Debug "Found cache in parent context."
-        }
     }
 
     if ($null -eq $cache) {
@@ -91,18 +97,25 @@ function Render-Template{
         $Cache = @{}
     }
 
+	$templatePath = Resolve-Path $templatePath
+
+	Write-Debug "Path resolved to '$templatePath'"
+
     $template = $null
 
     if ($Cache.ContainsKey($templatePath)) {
-        try {
+		Write-Debug "Found path in cache..."
+		try {
             $item = Get-Item $TemplatePath
             if ($item.LastWriteTime.Ticks -gt $Cache[$templatePath].LoadTime.Ticks) {
-                $t = [System.IO.File]::ReadAllText($templatePath)
+                Write-Debug "Cache is out-of-date, reloading..."
+				$t = [System.IO.File]::ReadAllText($templatePath)
                 $Cache[$templatePath] = @{ Value = $t; LoadTime = [datetime]::now }
             }
         } catch { <# Do nothing for now #> }
         $template = $Cache[$templatePath].Value
     } else {
+		Write-Debug "Not in cache, loading..."
         $template = [System.IO.File]::ReadAllText($templatePath)
         $Cache[$templatePath] = @{ Value = $template; LoadTime = [datetime]::now }
     }
@@ -118,6 +131,8 @@ function Render-Template{
     }
 
     $regex = New-Object regex ('<<(([^>]|>(?!>))+)>>', [System.Text.RegularExpressions.RegexOptions]::Multiline)
-    $regex.Replace($template, {param($match) Invoke-Expression $match.Groups[1].Value })
+    
+	Write-Debug "Starting Render..."
+	$regex.Replace($template, {param($match) Invoke-Expression $match.Groups[1].Value })
     
 }
