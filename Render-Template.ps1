@@ -95,6 +95,7 @@ function Render-Template{
     if ($null -eq $cache) {
         Write-Debug "Failed to get cache from parent. Creating new cache."
         $Cache = @{}
+		$script:__RenderCache = $Cache
     }
 
 	$templatePath = Resolve-Path $templatePath
@@ -124,15 +125,61 @@ function Render-Template{
     $__RenderCache = $Cache
     Remove-Variable "Cache"
 
+    
+	if (!$__RenderCache[$templatePath].ContainsKey("Digest")) {
+		$__buildDigest = {
+			param($templateCache)
+			
+			Write-Debug "Building digest..."
+			$__c__ = $templateCache
+			$__c__.Digest = @()
+			
+			$__regex__ = New-Object regex ('<<(([^>]|>(?!>))+)>>', [System.Text.RegularExpressions.RegexOptions]::Multiline)
+			$__meta__ = @{ LastIndex = 0 }
+			
+			$__regex__.Replace(
+				$template,
+				{
+					param($match)
+					$__li__ = $__meta__.LastIndex
+					$__g0__ = $match.Groups[0]
+					$__g1__ = $match.Groups[1]
+					#String preceding this expression.
+					$__ls__ = $template.Substring($__li__, ($__g0__.index - $__li__))
+					$__meta__.LastIndex = $__g0__.index + $__g0__.length
+					$__c__.Digest += $__ls__
+					$__c__.Digest += [scriptblock]::create($__g1__.value)
+					
+					$__meta__ | Out-String | Write-Debug
+					
+				}
+			) | Out-Null
+			
+			
+			if ($__meta__.LastIndex -lt $template.length) {
+				$__c__.Digest += $template.substring($__meta__.LastIndex)
+			}
+		}
+
+		& $__buildDigest $__RenderCache[$templatePath]
+	}
+
+
+	
     $TemplateDir = $templatePath | Split-Path -Parent
-
+	
+	# Expand values into user-space.
     $values.GetEnumerator() |% {
-            New-Variable $_.Name $_.Value
+        New-Variable $_.Name $_.Value
     }
-
-    $regex = New-Object regex ('<<(([^>]|>(?!>))+)>>', [System.Text.RegularExpressions.RegexOptions]::Multiline)
-    
+	
 	Write-Debug "Starting Render..."
-	$regex.Replace($template, {param($match) Invoke-Expression $match.Groups[1].Value })
-    
+	($__RenderCache[$templatePath].Digest | % {
+		if ($_ -is [string]) {
+			$_
+		} else {
+			$_.invoke()
+		}
+	}) -join ""
+	
 }
