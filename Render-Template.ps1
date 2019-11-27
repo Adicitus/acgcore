@@ -212,7 +212,9 @@ function Render-Template{
 					}
 				}
 			}
+
 			"scriptblock" {
+
 				$part.invoke()
 			}
 			default {
@@ -222,5 +224,6 @@ function Render-Template{
 	}
 	
 	$parts -join ""
+
 	
 }
