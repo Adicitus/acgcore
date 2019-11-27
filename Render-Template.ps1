@@ -61,7 +61,8 @@ acceptable, since the intention of the expressions is to introduce values into t
 rather than writing to the disk.
 
 Any expression that is so complicated that you might need to write to the disk should
-probably be handled as a closure or a function passed in via the $values parameter.
+probably be handled as a closure or a function passed in via the $values parameter, or
+a file included using a <<()>> expression.
 
 
 #>
@@ -170,14 +171,8 @@ function Render-Template{
 					} elseif ($__path__.Success){
 						# Expand any variables in the path:
 						$p = $ExecutionContext.InvokeCommand.ExpandString($__path__.Value)
-						$c = [System.IO.File]::ReadAllText($p, [System.Text.Encoding]::UTF8)
-						$i = if ($p -like "*.ps1") {
-							[scriptblock]::create($c)
-						} else {
-							$c
-						}
 
-						$__c__.Digest += $i
+						$__c__.Digest += @{ path=$p }
 						
 					}
 					
@@ -201,12 +196,31 @@ function Render-Template{
     }
 	
 	Write-Debug "Starting Render..."
-	($__RenderCache[$templatePath].Digest | % {
-		if ($_ -is [string]) {
-			$_
-		} else {
-			$_.invoke()
+	$parts = $__RenderCache[$templatePath].Digest | % {
+		$part = $_
+		switch ($part.GetType()) {
+			"hashtable" {
+				if ($part.path) {
+					Write-Debug "Including path..." 
+					$c = Render-Template $part.path $Values
+
+					if ($part.path -like "*.ps1") {
+						$s = [scriptblock]::create($c)
+						$s.Invoke()
+					} else {
+						$c
+					}
+				}
+			}
+			"sriptblock" {
+				$part.invoke()
+			}
+			default {
+				$part
+			}
 		}
-	}) -join ""
+	}
+	
+	$parts
 	
 }
