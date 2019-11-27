@@ -6,6 +6,9 @@ Renders a template file.
 Renders a template file of any type (HTML, CSS, RDP, etc..) using powershell expressions
 written between '<<' and '>>' markers to interpolate dynamic values.
 
+Files may also be included into the template by using <<(<path to file>)>>, if the file is
+a .ps1 file it will be interpreted as an expression to be executed, otherwise it will be executed as is
+
 .PARAMETER templatePath
 The path to the template file that should be rendered (relative of full).
 
@@ -28,8 +31,14 @@ During rendering the cache is available as '$__RenderCache'.
 
 .EXAMPLE
 Contents of .\page.template.html:
-    <header1><<$Title>></header1>
-    <header2><<$values.Chapter1>></header2>
+    <h1><<$Title>></he1>
+	<h2><<$values.Chapter1>></h2>
+	
+	<<(.\pages\1.html)>>
+
+Contents of .\pages\1.html:
+
+	It was the best of times, it was the worst of times.
 
 Running:
     $details = @{
@@ -39,8 +48,12 @@ Running:
     Render-Template .\page.template.html $details
 
 Will yield:
-    <header1>A tale of two cities</header1>
-    <header2>The Period</header2>
+    <h1>A tale of two cities</h1>
+	<h2>The Period</h2>
+	
+	It was the best of times, it was the worst of times.
+
+
 .NOTES
 The markup using '<<' and '>>' to denote the start and end of an interpolated expression
 precludes the use of the '>>' output operator in the expressions. This is considered
@@ -125,6 +138,7 @@ function Render-Template{
     $__RenderCache = $Cache
     Remove-Variable "Cache"
 
+    $TemplateDir = $templatePath | Split-Path -Parent
     
 	if (!$__RenderCache[$templatePath].ContainsKey("Digest")) {
 		$__buildDigest = {
@@ -134,7 +148,7 @@ function Render-Template{
 			$__c__ = $templateCache
 			$__c__.Digest = @()
 			
-			$__regex__ = New-Object regex ('<<(([^>]|>(?!>))+)>>', [System.Text.RegularExpressions.RegexOptions]::Multiline)
+			$__regex__ = New-Object regex ('<<(\((?<path>.+)\)|(?<command>([^>]|>(?!>))+))>>', [System.Text.RegularExpressions.RegexOptions]::Multiline)
 			$__meta__ = @{ LastIndex = 0 }
 			
 			$__regex__.Replace(
@@ -143,12 +157,29 @@ function Render-Template{
 					param($match)
 					$__li__ = $__meta__.LastIndex
 					$__g0__ = $match.Groups[0]
-					$__g1__ = $match.Groups[1]
-					#String preceding this expression.
+					$__path__	= $match.Groups["path"]
+					$__command__= $match.Groups["command"]
+					# String preceding this expression.
 					$__ls__ = $template.Substring($__li__, ($__g0__.index - $__li__))
 					$__meta__.LastIndex = $__g0__.index + $__g0__.length
 					$__c__.Digest += $__ls__
-					$__c__.Digest += [scriptblock]::create($__g1__.value)
+					
+					# Process the expression:
+					if ($__command__.Success) {
+						$__c__.Digest += [scriptblock]::create($__command__.value)
+					} elseif ($__path__.Success){
+						# Expand any variables in the path:
+						$p = $ExecutionContext.InvokeCommand.ExpandString($__path__.Value)
+						$c = [System.IO.File]::ReadAllText($p, [System.Text.Encoding]::UTF8)
+						$i = if ($p -like "*.ps1") {
+							[scriptblock]::create($c)
+						} else {
+							$c
+						}
+
+						$__c__.Digest += $i
+						
+					}
 					
 					$__meta__ | Out-String | Write-Debug
 					
@@ -163,10 +194,6 @@ function Render-Template{
 
 		& $__buildDigest $__RenderCache[$templatePath]
 	}
-
-
-	
-    $TemplateDir = $templatePath | Split-Path -Parent
 	
 	# Expand values into user-space.
     $values.GetEnumerator() |% {
