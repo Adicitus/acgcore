@@ -196,34 +196,34 @@ function Render-Template{
     }
 	
 	Write-Debug "Starting Render..."
-	$parts = $__RenderCache[$templatePath].Digest | % {
-		$part = $_
-		switch ($part.GetType()) {
+	$__parts__ = $__RenderCache[$templatePath].Digest | % {
+		$__part__ = $_
+		switch ($__part__.GetType()) {
 			"hashtable" {
-				if ($part.path) {
+				if ($__part__.path) {
 					Write-Debug "Including path..." 
-					$c = Render-Template $part.path $Values
+					$__c__ = Render-Template $__part__.path $Values
 
-					if ($part.path -like "*.ps1") {
-						$s = [scriptblock]::create($c)
-						$s.Invoke()
+					if ($__part__.path -like "*.ps1") {
+						$__s__ = [scriptblock]::create($__c__)
+						$__s__.Invoke()
 					} else {
-						$c
+						$__c__
 					}
 				}
 			}
 
 			"scriptblock" {
 
-				$part.invoke()
+				$__part__.invoke()
 			}
 			default {
-				$part
+				$__part__
 			}
 		}
 	}
 	
-	$parts -join ""
+	$__parts__ -join ""
 
 	
 }
