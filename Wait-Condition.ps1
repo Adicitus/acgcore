@@ -19,8 +19,8 @@ function Wait-Condition{
         }
 
         Start-Sleep -MilliSeconds $IntervalMS
-        $r = & $Test
-    } while(!(& $Evaluate $r))
+        $r = Test-Condition -Test $Test -Evaluate $Evaluate
+    } while(!$r)
 
     if ($OnPass) { & $OnPass }
 
