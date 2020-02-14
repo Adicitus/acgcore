@@ -41,6 +41,9 @@ Additional Rules:
 .PARAMETER Path
 The path to the configuration file.
 
+.PARAMETER Content
+Alternatively content to be parsed can be provided as a string.
+
 .PARAMETER Config
 Pre-populated configuration hashtable. If provided, the parser will add new settings to the hashtable.
 The default behavior is to generate a new hashtable.
@@ -77,8 +80,10 @@ where to look for the included file.
 
 Paths that do not start with either '\' or '/' will use the directory of the
 of the file currently being processed.
+If the command is called using the "String" parameter set, then this value will
+default to $pwd (current working directory).
 
-All included files will be parsed using the same IncludeRootPath, 
+All included files will be parsed using the same IncludeRootPath. 
 
 .EXAMPLE
 Normal Read:
@@ -100,12 +105,20 @@ Stop the parser from throwing an exception on error (use MetaData object to reco
 General notes
 #>
 function Parse-ConfigFile {
+    [CmdletBinding(DefaultParameterSetName="File")]
     param (
         [parameter(
             Mandatory=$true,
             Position=1,
+            ParameterSetName="File",
             HelpMessage="Path to the file."
         )] [String] $Path,              # Name of the job-file to parse (including extension)
+        [parameter(
+            Mandatory=$true,
+            Position=1,
+            ParameterSetName="String",
+            HelpMessage="Content to be parsed instead of reading from the file path. If this option is used and the path is not an actual file path, then 'IncludeRootPath' MUST be specified. Path must be specified regardless."
+        )] [string]$Content,
         [parameter(
             Mandatory=$false,
             Position=2,
@@ -164,15 +177,27 @@ function Parse-ConfigFile {
     }
 
     $Verbose = if (($Verbose -or $Loud) -and !$Silent) { $true } else { $false }
-	
-    if( $Path -and ([System.IO.File]::Exists($Path)) ) {
-        $lines = [System.IO.File]::ReadAllLines($Path, [System.Text.Encoding]::UTF8)
-    } else {
-        . $handleError -Message "<InvalidPath>The given path doesn't lead to an existing file: '$Path'"
-        return
-    }
+    
 
-    $currentDir = [System.IO.Directory]::GetParent($Path)
+    switch ($PSCmdlet.ParameterSetName) {
+    
+        "File" {
+            if( $Path -and ([System.IO.File]::Exists($Path)) ) {
+                $lines = [System.IO.File]::ReadAllLines($Path, [System.Text.Encoding]::UTF8)
+            } else {
+                . $handleError -Message "<InvalidPath>The given path doesn't lead to an existing file: '$Path'"
+                return
+            }
+
+            $currentDir = [System.IO.Directory]::GetParent($Path)
+
+        }
+
+        "String" {
+            $lines = $Content -split "`n"
+            $currentDir = "$pwd"
+        }
+    }
 
     if (!$PSBoundParameters.ContainsKey("IncludeRootPath")) {
         $IncludeRootPath = $currentDir
@@ -210,26 +235,26 @@ function Parse-ConfigFile {
                 if ($MetaData) { $MetaData.includes += $Matches.include }
                 
                 $includePath = $Matches.include
+   
+                $parseArgs = @{
+                    Config=$conf;
+                    MetaData=$MetaData;
+                    Cache=$Cache
+                    IncludeRootPath=$IncludeRootPath;
+                }
+
+                if ($includePath -match "^[/\\]") {
+                    $parseArgs.Path = "$IncludeRootPath${includePath}.ini" # Absolute path.
+                } else {
+                    $parseArgs.Path = "$currentDir\${includePath}.ini"; # Relative path.
+                }
+
+                if ($PSBoundParameters.ContainsKey("Verbose")) { $parseArgs.Verbose = $Verbose }
+                if ($PSBoundParameters.ContainsKey("NotStrict")) { $parseArgs.NotStrict = $NotStrict }
+                if ($PSBoundParameters.ContainsKey("Silent"))  { $parseArgs.Silent = $Silent }
 
                 try {
-                    
-                    $parseArgs = @{
-                        Config=$conf;
-                        MetaData=$MetaData;
-                        Cache=$Cache
-                        IncludeRootPath=$IncludeRootPath;
-                    }
 
-                    if ($includePath -match "^[/\\]") {
-                        $parseArgs.Path = "$IncludeRootPath${includePath}.ini" # Absolute path.
-                    } else {
-                        $parseArgs.Path = "$currentDir\${includePath}.ini"; # Relative path.
-                    }
-
-                    if ($PSBoundParameters.ContainsKey("Verbose")) { $parseArgs.Verbose = $Verbose }
-                    if ($PSBoundParameters.ContainsKey("NotStrict")) { $parseArgs.NotStrict = $NotStrict }
-                    if ($PSBoundParameters.ContainsKey("Silent"))  { $parseArgs.Silent = $Silent }
-                    
                     if ($Cache) {
                         $parseArgs.Remove("Config")
                         if ($Cache.ContainsKey($parseArgs.Path)) {
@@ -244,11 +269,12 @@ function Parse-ConfigFile {
                     } else {
                         Parse-ConfigFile @parseArgs | Out-Null
                     }
+                    
                 } catch {
                     if ($_.Exception -like "<InvalidPath>*") {
                         . $handleError -Message $_
                     } else {
-                        . $handleError "An unknown exception occurred while parsing the include file at '$currentDir\${includePath}.ini' (in root file '$Path'): $_"
+                        . $handleError "An unknown exception occurred while parsing the include file at '$($parseArgs.Path)' (in root file '$Path'): $_"
                     }
                 }
 
