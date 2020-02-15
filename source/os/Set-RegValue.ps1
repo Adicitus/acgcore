@@ -1,6 +1,4 @@
-﻿. "$PSScriptRoot\Run-Operation.ps1"
-
-function Set-RegValue($key, $name, $value, $type=$null) {
+﻿function Set-RegValue($key, $name, $value, $type=$null) {
     if (!$type) {
         if ($value -is [int16] -or $value -is [int32]) {
             $type = "REG_DWORD"

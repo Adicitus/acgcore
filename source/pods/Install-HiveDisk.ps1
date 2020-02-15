@@ -1,11 +1,4 @@
-﻿. "$PSScriptRoot\Run-Operation.ps1"
-. "$PSScriptRoot\RegexPatterns.ps1"
-. "$PSScriptRoot\Parse-ConfigFile.ps1"
-. "$PSScriptRoot\Find-VolumePath.ps1"
-. "$PSScriptRoot\Change-DriveLetter.ps1"
-. "$PSScriptRoot\New-PSCredential.ps1"
-
-<#
+﻿<#
 .WISHLIST
     - [Done 20170418 - Functionality moved to Caffeinate] Should take the hive.ini configuration
       files and merge them with the main configuration, letting each hive add directives

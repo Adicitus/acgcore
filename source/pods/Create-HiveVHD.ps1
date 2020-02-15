@@ -1,7 +1,4 @@
-﻿. "$PSScriptRoot\Find-VolumePath.ps1"
-. "$PSScriptRoot\Create-PodVHD.ps1"
-
-function Create-HiveVHD {
+﻿function Create-HiveVHD {
     param(
         $PackageName,
         $Label=$PackageName,

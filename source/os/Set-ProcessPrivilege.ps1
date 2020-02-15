@@ -4,7 +4,7 @@
 
 
 if (! (Get-TypeData -TypeName "ProcessPrivilegeAdjustor") ) {
-    Add-Type -Path "$PSScriptRoot\src\ProcessPrivilegeAdjustor.cs"
+    Add-Type -Path "$PSScriptRoot\.assets\ProcessPrivilegeAdjustor.cs"
 }
 
 function Set-ProcessPrivilege {

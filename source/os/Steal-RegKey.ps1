@@ -1,7 +1,4 @@
-﻿. "$PSScriptRoot\Run-Operation.ps1"
-. "$PSScriptRoot\Set-ProcessPrivilege.ps1"
-
-<#
+﻿<#
 .SYNOPSIS
     Grants ownership of the given registry key to the designated user (default is the current user).
 .PARAMETER RegKey

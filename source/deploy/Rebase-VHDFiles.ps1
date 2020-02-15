@@ -1,6 +1,4 @@
-﻿try { $_ = get-Variable RegexPatterns -Scope Script -ErrorAction Stop } catch { . "$PSScriptRoot\RegexPatterns.ps1" }
-
-
+﻿
 function Rebase-VHDFiles() {
     
     param(

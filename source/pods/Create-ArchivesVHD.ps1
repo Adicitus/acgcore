@@ -1,6 +1,4 @@
-﻿. "$PSScriptRoot\Create-PodVHD.ps1"
-
-function Create-ArchivesVHD {
+﻿function Create-ArchivesVHD {
     param(
         $PackageName,
         $Label=$PackageName,

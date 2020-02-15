@@ -1,9 +1,4 @@
-﻿. "$PSScriptRoot\Run-Operation.ps1"
-. "$PSScriptRoot\Find-VolumePath.ps1"
-. "$PSScriptRoot\Unpack-RARFile.ps1"
-
-
-# Unpacks a MOCSetup-style Archive disk (Cluster Pod).
+﻿# Unpacks a MOCSetup-style Archive disk (Cluster Pod).
 # 
 # !NOTE! This function requires the Hyper-V VHD cmdlts to function.
 # It used rely on the DiskImage cmdlts, but since I have had access

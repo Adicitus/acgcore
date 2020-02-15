@@ -1,6 +1,4 @@
-﻿. "$PSScriptRoot\Find-VolumePath.ps1"
-
-<#
+﻿<#
 
 .SYNOPSIS
 Creates a VHD used as a pod for the Caffeine delivery system.

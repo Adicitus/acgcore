@@ -1,6 +1,4 @@
-﻿. "$PSScriptRoot\Run-Operation.ps1"
-
-# Utility to acquire registry values using reg.exe (uses Run-Operation)
+﻿# Utility to acquire registry values using reg.exe (uses Run-Operation)
 function Query-RegValue($key, $name){
     $regValueQVregex = "\s+{0}\s+(?<type>REG_[A-Z]+)\s+(?<value>.*)"
     { reg query $key /v $name } | Run-Operation | ? {  $_ -match ($regValueQVregex -f $name) } | % {

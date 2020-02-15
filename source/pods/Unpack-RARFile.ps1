@@ -1,11 +1,9 @@
-﻿. "$PSScriptRoot\Run-Operation.ps1"
-
-function Unpack-RARFile{
+﻿function Unpack-RARFile{
     param(
 		[parameter(Mandatory=$true, ValueFromPipeline=$true, ParameterSetName="FileInfo", position=1)][System.IO.FileInfo]$File,
 		[parameter(Mandatory=$true, ValueFromPipeline=$true, ParameterSetName="String", position=1)][String]$Path,
 		[parameter(Mandatory=$false, position=2)] $Destination=$null,
-		[parameter(Mandatory=$false, position=3)] $UnrarPath="$PSScriptRoot\bin\RAR\UnRAR.exe"
+		[parameter(Mandatory=$false, position=3)] $UnrarPath="$PSScriptRoot\.assets\UnRAR.exe"
 	)
 	
 	if ($Path) {
