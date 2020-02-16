@@ -28,16 +28,17 @@
 
     
     Write-Host "Adding hive.ini... " -NoNewline
-    $hiveConfig = New-Item "${path}hive.ini" -ItemType File
-    $path = $hiveConfig.FullName
-    $acl = Get-Acl $path
+    $hiveConfig = [System.IO.File]::create("${path}hive.ini")
+    $path = $hiveConfig.Name
+    $acl = $hiveConfig.GetAccessControl()
     $ar = New-Object System.Security.AccessControl.FileSystemAccessRule("Everyone", "FullControl", "Allow")
     $acl.SetAccessRule($ar)
-    Set-Acl $path $acl
+    [System.IO.File]::SetAccessControl($path, $acl)
+    $hiveConfig.Close()
     Write-Host "Done!" -ForegroundColor Green
 
     Write-Host "Hiding hive.ini..." -NoNewline
-    $hiveConfig | Set-ItemProperty -Name Attributes -Value ([System.IO.FileAttributes]::Hidden)
+    [System.IO.File]::SetAttributes($path, [System.IO.FileAttributes]::Hidden)
     Write-Host "Done!" -ForegroundColor Green
 
 
