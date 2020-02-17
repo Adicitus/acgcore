@@ -1,5 +1,9 @@
 
 
+param(
+    $OutRoot="$PSScriptRoot\Out"
+)
+
 # Build manifest
 $manifestArgs = @{}
 $buildArgs = @{}
@@ -16,7 +20,7 @@ Get-ChildItem "$PSScriptRoot\build.settings\manifest" -File | ForEach-Object {
 
 $moduleName = $buildArgs.modulename
 
-$outDir = "$PSScriptRoot\out\$moduleName"
+$outDir = "$OutRoot\$moduleName"
 $assetsOutDir = "$outDir\.assets"
 $srcDir = "$PSScriptRoot\source"
 
