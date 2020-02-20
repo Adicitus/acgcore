@@ -1,7 +1,7 @@
 
 
 param(
-    $OutRoot="$PSScriptRoot\Out"
+    $OutRoot="$PSScriptRoot\out"
 )
 
 # Build manifest
@@ -34,11 +34,16 @@ if (Test-Path $outDir) {
 $null = New-Item $outDir -ItemType Directory
 
 # Build Script module
-Get-ChildItem $srcDir -Directory | ForEach-Object {
-    $item = $_
-    $subName = $_.Name
+
+$addFolder = {
+    param(
+        [System.IO.DirectoryInfo]$item,
+        [String]$subname
+    )
     
-    "# {0}.{1}" -f $moduleName, $subName >> $moduleFile
+    if ($subname) {
+        "# {0}.{1}" -f $moduleName, $subname >> $moduleFile
+    }
 
     if ($assetsDir = Get-ChildItem $item.FullName -Filter ".assets" -Directory) {
         if ( !(Test-Path $assetsOutDir) ) {
@@ -53,6 +58,17 @@ Get-ChildItem $srcDir -Directory | ForEach-Object {
     Get-ChildItem $item.FullName -Filter *.ps1 | ForEach-Object {
         Get-Content $_.FullName >> $moduleFile
     }
+
+}
+
+# Start with the root dir
+. $addFolder (Get-Item $srcDir)
+
+# Then include subfolders
+Get-ChildItem $srcDir -Directory | ForEach-Object {
+    $item = $_
+
+    . $addFolder $item $item.Name
 }
 
 New-ModuleManifest -Path $manifestFile @manifestArgs
