@@ -57,7 +57,7 @@ function Install-HiveDisk{
     $getCommand = "Get-DiskImage"
     $mountCommand = "Mount-DiskImage"
 
-    if (Get-Module "Hyper-V") {
+    if (Get-Module "Hyper-V" -ListAvailable) {
         $getCommand = "Get-VHD"
         $mountCommand = "Mount-VHD"
     }
