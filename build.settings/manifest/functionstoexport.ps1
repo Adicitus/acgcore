@@ -7,6 +7,7 @@
     'Test-Condition'
     'Wait-Condition'
     'Write-ConfigFile'
+    'Unlock-SecureString'
     # Credentials
     'Load-Credential'
     'New-PSCredential'
