@@ -54,23 +54,26 @@ function Install-HiveDisk{
         }
     )
 
-    if ( !(Get-Module Hyper-V -ListAvailable )) {
-        ShoutOut "Unable to install, no 'Hyper-V' module available (install relies on VHD cmdlets)!" Warning
-        return
-    } 
+    $getCommand = "Get-DiskImage"
+    $mountCommand = "Mount-DiskImage"
+
+    if (Get-Module "Hyper-V") {
+        $getCommand = "Get-VHD"
+        $mountCommand = "Mount-VHD"
+    }
 
     $podPath = $File.FullName
 
-    $image = { $podPath | Get-VHD } | Run-Operation
+    $image = { & $getCommand $podPath } | Run-Operation
     if (!$image -or $image -is [System.Management.Automation.ErrorRecord]) {
-        shoutOut "Could not open '$podPath' as a VHD!" Error
+        shoutOut "Could not open '$podPath'!" Error
         return
     }
 
     if (!$image.Attached) {
         shoutOut "Mounting '$podPath'" Info
-        $image | Mount-VHD
-        $image = $image | Get-VHD
+        & $mountCommand $podPath
+        $image = & $getCommand $podPath
     }
 
     $disk = $image | Get-Disk
@@ -207,7 +210,7 @@ function Install-HiveDisk{
                             }
                         }
                     } else {
-                         $target = $defaultTarget
+                        $target = $defaultTarget
                     }
 
                     $cmd = if ($targetIsDirectory) {
@@ -223,51 +226,21 @@ function Install-HiveDisk{
         }
 
 
-        $jobName = "MountHive($($File.Name))"
-        if ($t = Get-ScheduledJob | ? {$_.Name -eq $jobName}) {
+        $taskName = "MountHive($($File.Name))"
+        if ($t = Get-ScheduledTask $taskName -ea SilentlyContinue) {
             shoutOut "Found a startup task for this hive, removing it.... " Info -NoNewline
-            $t | Unregister-ScheduledJob -Confirm:$false
+            $t | Unregister-ScheduledTask -Confirm:$false
             shoutOut "Done!" Green
         }
 
-        shoutOut "Adding startup job to mount the hive... " Info -NoNewline
+        shoutOut "Adding startup task to mount the hive... " Info -NoNewline
         {
-            $trigger = New-JobTrigger -AtStartup
-            $options = New-ScheduledJobOption -RunElevated -MultipleInstancePolicy IgnoreNew -StartIfOnBattery
-            $block = {
-                param($vhdPath)
-                $logFile = "$vhdPath.mount.log"
-				
-				try {
-					Import-Module ACGCore -ErrorAction Stop
-				} catch {
-					"{0:yyyyMMdd-HHmmss}: Unable to import the 'ACGCore' module!" -f [datetime]::now >> $logFile
-					$_ >> $logFile
-					return
-				}
-				
-				Set-ShoutOutConfig -LogFile $logFile
-				
-				$vhd = Get-VHD $vhdPath
-                "{0:yyyyMMdd-HHmmss}: Attempting to mount '{1}'..." -f [datetime]::now, $vhdPath | shoutOut
-				
-                $vhd | Mount-VHD *>&1 | shoutOut
-                
-                $vhd = Get-VHD $vhdPath
-                if ($vhd.Attached) {
-                    "{0:yyyyMMdd-HHmmss}: '{1}' is mounted as disk {2}." -f [datetime]::now, $vhdPath, $vhd.DiskNumber | shoutOut
-                    
-                } else {
-                    "{0:yyyyMMdd-HHmmss}: '{1}' is not mounted." -f [datetime]::now, $vhdPath | shoutOut
-                }
-            }
-            $username = if ($Credential.Domain) {
-                "{0}\{1}" -f $Credential.Domain, $Credential.Username
-            } else {
-                $Credential.Username
-            }
-            $cred = New-PSCredential $username $Credential.Password
-            Register-ScheduledJob -Name $jobName -ScriptBlock $block -Trigger $trigger -ScheduledJobOption $options -Credential $cred -ArgumentList $File.FullName
+            $t = New-ScheduledTaskTrigger -AtStartup
+            $s = New-ScheduledTaskSettingsSet -Priority 1
+            $a = New-ScheduledTaskAction -Execute Powershell.exe -Argument "-Command $mountCommand '$($File.FullName)'"
+            $p = New-ScheduledTaskPrincipal -UserID SYSTEM -LogonType ServiceAccount
+
+            Register-ScheduledTask -TaskName $taskName -Action $a -Trigger $t -Settings $s -Principal $p
         } | Run-Operation
         shoutOut "Done!" Green
     }
