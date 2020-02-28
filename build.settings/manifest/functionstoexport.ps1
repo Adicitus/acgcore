@@ -41,4 +41,7 @@
     'Install-HiveDisk'
     'Unpack-ArchiveDisk'
     'Unpack-RARFile'
+    #Text
+    'ConvertTo-UnicodeEscapedString'
+    'ConvertFrom-UnicodeEscapedString'
 )
