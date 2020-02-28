@@ -3,6 +3,8 @@ function Save-Credential(
     [string] $path,
     [switch] $UseKey
 ) {
+    $Path = Resolve-Path $Path
+
     $convertArgs = @{
         SecureString = $Credential.Password
     }

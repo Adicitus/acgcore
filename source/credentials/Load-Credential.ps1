@@ -1,9 +1,11 @@
 function Load-Credential {
     [CmdletBinding()]
     param(
-        $path,
+        $Path,
         $Key
     )
+
+    $Path = Resolve-Path $path
 
     $credStr = [System.IO.File]::ReadAllText($path, [System.Text.Encoding]::UTF8)
     $u, $p = $credStr.split(":")
