@@ -23,7 +23,7 @@ function Pin-App {
             $as += " -Unpin"
         }
 	
-        $command = ". $PSScriptRoot\Pin-App.ps1; Pin-App $as"
+        $command = "Pin-App $as"
 
         & $exepath -Command $command
         return
