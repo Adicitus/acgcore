@@ -4,6 +4,7 @@ Transforms a SecureString back into a plain string. Must the run by the same use
 #>
 function Unlock-SecureString {
     param(
+        [Parameter(Mandatory=$true, ValueFromPipeline=$true)]
         [SecureString]$SecString
     )
     $Marshal = [Runtime.InteropServices.Marshal]
