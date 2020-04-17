@@ -7,10 +7,12 @@ Renders a template file of any type (HTML, CSS, RDP, etc..) using powershell exp
 written between '<<' and '>>' markers to interpolate dynamic values.
 
 Files may also be included into the template by using <<(<path to file>)>>, if the file is
-a .ps1 file it will be interpreted as an expression to be executed, otherwise it will be executed as is
+a .ps1 file it will be interpreted as an expression to be executed, otherwise it will be
+treated as a template file and rendered using the same Values.
 
 .PARAMETER templatePath
-The path to the template file that should be rendered (relative of full).
+The path to the template file that should be rendered (relative or fully qualified,
+UNC paths not supported).
 
 .PARAMETER values
 A hashtable of values that should be used when resolving powershell expressions.
