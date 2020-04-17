@@ -1,7 +1,9 @@
 #ConvertTo-UnicodeEscapedString.ps1
 
 function ConvertTo-UnicodeEscapedString {
+    [CmdletBinding()]
     param(
+        [Parameter(Mandatory=$true, ValueFromPipeline=$true)]
         [String]$inString
     )
 
