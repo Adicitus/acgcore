@@ -8,6 +8,7 @@
     'Wait-Condition'
     'Write-ConfigFile'
     'Unlock-SecureString'
+    'Reset-Module'
     # Credentials
     'Load-Credential'
     'New-PSCredential'
