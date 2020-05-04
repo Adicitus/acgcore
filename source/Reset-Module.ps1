@@ -9,5 +9,5 @@ function Reset-Module {
         Remove-Module $module -Force
     }
 
-    Import-Module $Name
+    Import-Module $Name -Global
 }
