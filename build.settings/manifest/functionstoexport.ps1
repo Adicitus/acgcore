@@ -9,7 +9,7 @@
     'Write-ConfigFile'
     'Unlock-SecureString'
     'Reset-Module'
-    'New-RandomSecureString'
+    'New-RandomString'
     # Credentials
     'Load-Credential'
     'New-PSCredential'
