@@ -1,0 +1,1 @@
+$script:__RNG = New-Object System.Random

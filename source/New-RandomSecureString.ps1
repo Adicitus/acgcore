@@ -6,7 +6,7 @@ function New-RandomSecureString() {
         [string]$Characters="abcdefghijklmnopqrstuvwxyz0123456789-_"
     )
 
-    $rng = New-Object System.Random
+    $rng = $script:__RNG
 
     $password = New-Object securestring
 
