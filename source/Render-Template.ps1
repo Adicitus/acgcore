@@ -85,7 +85,12 @@ function Render-Template{
             Mandatory=$false,
             HelpMessage='Optional Hashtable used to cache the content of files once they are loaded. Pass in a hashtable to retain cache between calls. Available as $__RenderCache when rendering.'
         )]
-        [hashtable]$Cache = $null
+		[hashtable]$Cache = $null,
+		[Parameter(
+            Mandatory=$false,
+            HelpMessage='Regular expression used to identify interpolation sections.'
+        )]
+		[string]$InterpolationRegex = '<<(\((?<path>.+)\)|(?<command>([^>]|>(?!>))+))>>'
     )
 
 
@@ -151,7 +156,7 @@ function Render-Template{
 			$__c__ = $templateCache
 			$__c__.Digest = @()
 			
-			$__regex__ = New-Object regex ('<<(\((?<path>.+)\)|(?<command>([^>]|>(?!>))+))>>', [System.Text.RegularExpressions.RegexOptions]::Multiline)
+			$__regex__ = New-Object regex ($InterpolationRegex, [System.Text.RegularExpressions.RegexOptions]::Multiline)
 			$__meta__ = @{ LastIndex = 0 }
 			
 			$__regex__.Replace(
