@@ -30,6 +30,22 @@ Recursive calls to Render-Template will attempt to reuse the same cache object.
 
 During rendering the cache is available as '$__RenderCache'.
 
+.PARAMETER StartTag
+Tag used to indicate the start of a section in the text that should be interpolated.
+
+This string will be treated as a regular expression, so any special characters
+('*', '+', '[', ']', '(', ')', '\', '?', '{', '}', etc) should be escaped with a '\'.
+
+The default start tag is '<<'.
+
+
+.PARAMETER EndTag
+Tag used to indicate the end of a section in the text that should be interpolated.
+
+This string will be treated as a regular expression, so any special characters
+('*', '+', '[', ']', '(', ')', '\', '?', '{', '}', etc) should be escaped with a '\'.
+
+The default end tag is '>>'.
 
 .EXAMPLE
 Contents of .\page.template.html:
@@ -57,8 +73,8 @@ Will yield:
 
 
 .NOTES
-The markup using '<<' and '>>' to denote the start and end of an interpolated expression
-precludes the use of the '>>' output operator in the expressions. This is considered
+The markup using the default '<<' and '>>' tags to denote the start and end of an interpolated
+expression precludes the use of the '>>' output operator in the expressions. This is considered
 acceptable, since the intention of the expressions is to introduce values into the text,
 rather than writing to the disk.
 
@@ -66,6 +82,7 @@ Any expression that is so complicated that you might need to write to the disk s
 probably be handled as a closure or a function passed in via the $values parameter, or
 a file included using a <<()>> expression.
 
+Alternatively, you can use the the EndTag parameter top provide another acceptable end tag (e.g. '!>>').
 
 #>
 function Render-Template{
@@ -88,11 +105,23 @@ function Render-Template{
 		[hashtable]$Cache = $null,
 		[Parameter(
             Mandatory=$false,
-            HelpMessage='Regular expression used to identify interpolation sections.'
+            HelpMessage='Tag used to open interpolation sections. Regular Expression.'
         )]
-		[string]$InterpolationRegex = '<<(\((?<path>.+)\)|(?<command>([^>]|>(?!>))+))>>'
+		[string]$StartTag = '<<',
+		[Parameter(
+            Mandatory=$false,
+            HelpMessage='Tag used to close interpolation sections. Regular expression.'
+        )]
+		[string]$EndTag = '>>'
     )
 
+
+	$EndTagStart = $EndTag[0]
+	if ($EndTagStart -eq '\') {
+		$EndTagStart.Substring(0, 2)
+	}
+	$EndTagRemainder = $EndTag.Substring($EndTagStart.Length)
+	$InterpolationRegex = "{0}(\((?<path>.+)\)|(?<command>([^{1}]|{1}(?!{2}))+)){3}" -f $StartTag, $EndTagStart, $EndTagRemainder, $EndTag
 
 	if ($Cache) {
 		Write-Debug "Cache provided by caller, updating global."
