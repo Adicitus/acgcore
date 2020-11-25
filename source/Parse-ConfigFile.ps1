@@ -35,7 +35,7 @@ Additional Rules:
     - The first declaration of the file must be preceeded by a section header.
     - If more than one value is declared for a setting, they will be collected
       into an array.
-    - All values will we be read as strings and the application using the
+    - All values will be read as strings and the application using the
       configuration must determine how to interpret the values.
 
 .PARAMETER Path
@@ -71,6 +71,11 @@ Causes the parser to output extra information to the console.
 .PARAMETER duplicatesAllowed
 Names of settings for which duplicate values are allowed.
 
+By default, if there are two declarations of the same setting with the same value,
+the second occurence of the value will be discarded. When a setting name is
+specified here, the second occurrence will instead be appended to the list of
+values for the setting.
+
 .PARAMETER IncludeRootPath
 The root path to use when resolving includes. If this value isn't provided
 then it will default to the directory part of $Path.
@@ -79,11 +84,12 @@ Include-paths that start with '\' or '/' will use this value when resolving
 where to look for the included file.
 
 Paths that do not start with either '\' or '/' will use the directory of the
-of the file currently being processed.
+file currently being processed.
+
 If the command is called using the "String" parameter set, then this value will
 default to $pwd (current working directory).
 
-All included files will be parsed using the same IncludeRootPath. 
+All included files will be parsed using the same IncludeRootPath.
 
 .EXAMPLE
 Normal Read:
@@ -307,7 +313,7 @@ function Parse-ConfigFile {
                         $conf[$CurrentSection][$Matches.Name] = @( $conf[$CurrentSection][$Matches.Name], $value )
                     }
                 } else {
-                    $v = if ($value -eq $null) { "" } else { $value } # Convertion to match the behaviour of Read-Conf
+                    $v = if ($null -eq $value) { "" } else { $value } # Convertion to match the behaviour of Read-Conf
                     $conf[$CurrentSection][$Matches.Name] = $v
                 }
                 break;
@@ -334,7 +340,7 @@ function Merge-Configs {
     param(
         [Parameter(Mandatory=$true,  HelpMessage="Configuration 1, values from this object will appear first in the cases where values overlap.")]
         [ValidateNotNull()][hashtable]$C1,
-        [Parameter(Mandatory=$true,  HelpMessage="Configuration 1, values from this object will appear last in the cases where values overlap.")]
+        [Parameter(Mandatory=$true,  HelpMessage="Configuration 2, values from this object will appear last in the cases where values overlap.")]
         [ValidateNotNull()][hashtable]$C2,
         [parameter(Mandatory=$false, HelpMessage="Array of settings for which values can be duplicated.")]
         [array] $duplicatesAllowed = @("Operation","Pre","Post")
@@ -353,7 +359,11 @@ function Merge-Configs {
                 return $v1 + $v2
             } else {
                 $v = $v1
-                $v2 | ? { $da -or $_ -notin $v } | % { $v += $_ }
+                $v2 | Where-Object {
+                    $da -or $_ -notin $v
+                } | ForEach-Object {
+                    $v += $_
+                }
                 return $v
             }
         } else {
@@ -364,7 +374,9 @@ function Merge-Configs {
                 return @($v1, $v2)
             } else {
                 $v = @($v1)
-                $v2 | ? { $da -or $_ -notin $v } | % { $v += $_ }
+                $v2 | Where-Object {
+                    $da -or $_ -notin $v
+                } | ForEach-Object { $v += $_ }
                 return $v
             }
         } 
@@ -372,19 +384,23 @@ function Merge-Configs {
 
     $NC = @{}
 
-    $C1.Keys | ? { $_ -and ($C1[$_] -is [hashtable]) } | % {
+    $C1.Keys | Where-Object {
+        $_ -and ($C1[$_] -is [hashtable])
+    } | ForEach-Object {
         $s = $_
         $NC[$s] = @{}
-        $C1[$s].GetEnumerator() | % {
+        $C1[$s].GetEnumerator() | ForEach-Object {
             $NC[$s][$_.Name] = $C1[$s][$_.Name]
         }
     }
-    $C2.Keys | ? { $_ -ne $null -and ($C2[$_] -is [hashtable]) } | % {
+    $C2.Keys | Where-Object {
+        $_ -ne $null -and ($C2[$_] -is [hashtable])
+    } | ForEach-Object {
         $s = $_
         if (!$NC.ContainsKey($s)) {
             $NC[$s] = @{}
         }
-        $C2[$s].GetEnumerator() | % {
+        $C2[$s].GetEnumerator() | ForEach-Object {
             $n = $_.Name
             $v = $_.Value
 
