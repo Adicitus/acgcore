@@ -248,7 +248,7 @@ function Render-Template{
 							$__s__.Invoke()
 						} catch {
 							$msg = "An unexpected exception occurred while Invoking '{0}' as part of '{1}'." -f $__part__.path, $templatePath
-							$e = New-Object $msg $_
+							$e = New-Object System.Exception $msg, $_
 
 							throw $e
 						}
@@ -263,11 +263,12 @@ function Render-Template{
 					$__part__.invoke()
 				} catch {
 					$msg = "An unexpected exception occurred while rendering an expression in '{0}': {1}" -f $templatePath, $__part__
-					$e = New-Object $msg $_
+					$e = New-Object System.Exception $msg, $_
 
 					throw $e
 				}
 			}
+			
 			default {
 				$__part__
 			}
