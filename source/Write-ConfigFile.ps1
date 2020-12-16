@@ -20,10 +20,10 @@ function Write-ConfigFile {
                 }
 
                 # Setting, Append <item>=<value> to output for each value.
-                $value = $value.Replace("#", "\#").trimend() 
-                $output += (
-                    ($item, $value | Where-Object { $_ }) -join '='
-                )
+                if ($value -is [string]) {
+                    $value = $value.Replace("#", "\#").trimend()
+                }
+                $output += "{0}={1}" -f $item, $value
             }
         }
         $output += "" # Empty line between each section to make output more readable.
