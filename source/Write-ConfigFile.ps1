@@ -13,17 +13,17 @@ function Write-ConfigFile {
         $output += "[$key]"
         foreach ($item in $config[$key].keys) {
             foreach ($value in $config[$key][$item]) {
-                if (!$value) {
+                if ($null -eq $value) {
                     # Entry, just append it to the output
                     $output += $item
                     continue
                 }
 
                 # Setting, Append <item>=<value> to output for each value.
-                $value = $value.Replace("#", "\#").trimend() 
-                $output += (
-                    ($item, $value | Where-Object { $_ }) -join '='
-                )
+                if ($value -is [string]) {
+                    $value = $value.Replace("#", "\#").trimend()
+                }
+                $output += "{0}={1}" -f $item, $value
             }
         }
         $output += "" # Empty line between each section to make output more readable.
