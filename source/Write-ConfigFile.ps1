@@ -13,7 +13,7 @@ function Write-ConfigFile {
         $output += "[$key]"
         foreach ($item in $config[$key].keys) {
             foreach ($value in $config[$key][$item]) {
-                if (!$value) {
+                if ($null -eq $value) {
                     # Entry, just append it to the output
                     $output += $item
                     continue
