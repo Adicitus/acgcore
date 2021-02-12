@@ -175,6 +175,7 @@ function Render-Template{
     $__RenderCache = $Cache
     Remove-Variable "Cache"
 
+	# Defining TemplateDir here to make it accessible when evaluating scriptblocks.
     $TemplateDir = $templatePath | Split-Path -Parent
     
 	if (!$__RenderCache[$templatePath].ContainsKey("Digest")) {
@@ -192,24 +193,25 @@ function Render-Template{
 				$template,
 				{
 					param($match)
+					# Isolate information about the expression.
 					$__li__ = $__meta__.LastIndex
 					$__g0__ = $match.Groups[0]
 					$__path__	= $match.Groups["path"]
 					$__command__= $match.Groups["command"]
-					# String preceding this expression.
+					
+					# Collect string literal preceeding this expression and add it to the digest.
 					$__ls__ = $template.Substring($__li__, ($__g0__.index - $__li__))
 					$__meta__.LastIndex = $__g0__.index + $__g0__.length
 					$__c__.Digest += $__ls__
 					
 					# Process the expression:
 					if ($__command__.Success) {
+						# Expression is a command: turn it into a script block and add it to the digest.
 						$__c__.Digest += [scriptblock]::create($__command__.value)
 					} elseif ($__path__.Success){
-						# Expand any variables in the path:
+						# Expand any variables in the path and add the expanded path to digest:
 						$p = $ExecutionContext.InvokeCommand.ExpandString($__path__.Value)
-
-						$__c__.Digest += @{ path=$p }
-						
+						$__c__.Digest += @{ path=$p }						
 					}
 					
 					$__meta__ | Out-String | Write-Debug
@@ -226,8 +228,8 @@ function Render-Template{
 		& $__buildDigest $__RenderCache[$templatePath]
 	}
 	
-	# Expand values into user-space.
-    $values.GetEnumerator() |% {
+	# Expand values into user-space to make them more accessible during render.
+    $values.GetEnumerator() | % {
         New-Variable $_.Name $_.Value
     }
 	
@@ -242,7 +244,14 @@ function Render-Template{
 
 					if ($__part__.path -like "*.ps1") {
 						$__s__ = [scriptblock]::create($__c__)
-						$__s__.Invoke()
+						try {
+							$__s__.Invoke()
+						} catch {
+							$msg = "An unexpected exception occurred while Invoking '{0}' as part of '{1}'." -f $__part__.path, $templatePath
+							$e = New-Object System.Exception $msg, $_
+
+							throw $e
+						}
 					} else {
 						$__c__
 					}
@@ -250,9 +259,16 @@ function Render-Template{
 			}
 
 			"scriptblock" {
+				try {
+					$__part__.invoke()
+				} catch {
+					$msg = "An unexpected exception occurred while rendering an expression in '{0}': {1}" -f $templatePath, $__part__
+					$e = New-Object System.Exception $msg, $_
 
-				$__part__.invoke()
+					throw $e
+				}
 			}
+			
 			default {
 				$__part__
 			}

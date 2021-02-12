@@ -1,9 +1,8 @@
 function Save-Credential(
     [PSCredential] $Credential,
-    [string] $path,
+    [string] $Path,
     [switch] $UseKey
 ) {
-    $Path = Resolve-Path $Path
 
     $convertArgs = @{
         SecureString = $Credential.Password
