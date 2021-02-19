@@ -15,7 +15,7 @@ function Save-Credential(
     }
 
     $credStr = "{0}:{1}" -f $Credential.Username, (ConvertFrom-SecureString @convertArgs)
-    [System.IO.File]::WriteAllText($path, $credStr, [System.Text.Encoding]::UTF8)
+    $credStr | Out-File -FilePath $Path -Encoding utf8
 
     if ($UseKey) {
         return [System.Convert]::ToBase64String($convertArgs.Key)
