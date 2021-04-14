@@ -1,7 +1,8 @@
 function Save-Credential(
     [PSCredential] $Credential,
     [string] $Path,
-    [switch] $UseKey
+    [switch] $UseKey,
+    [string] $Key
 ) {
 
     $convertArgs = @{
@@ -9,8 +10,15 @@ function Save-Credential(
     }
 
     if ($UseKey) {
-        $r = [System.Random]::new()
-        $bytes = [byte[]]( 0..31 | % { $r.next(0, 255) } )
+        if ($Key) {
+            $bytes = [System.Convert]::FromBase64String($Key)
+            if ($bytes.count -ne 32) {
+                throw "Invalid key provided for Save-Credential (expected a Base64 string convertable to a 32 byte array)."
+            }
+        } else {
+            $r = [System.Random]::new()
+            $bytes = [byte[]]( 0..31 | % { $r.next(0, 255) } )
+        }
         $convertArgs.Key = $bytes
     }
 
