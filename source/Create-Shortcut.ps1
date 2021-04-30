@@ -12,8 +12,8 @@ function Create-Shortcut(){
         $shortcutDir  = $Matches.directory
         $shortcutFile = $Matches.filename
     } else {
-        shoutOut "Invalid path: " Red -NoNewline
-		shoutOut "$shortcutPath"
+        shoutOut "Invalid path: " Error -NoNewline
+		shoutOut "$shortcutPath" Error
         return $false
     }
 
