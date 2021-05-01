@@ -1,1 +1,1 @@
-"Cornerstone AB"
+"Cornerstone Group AB"

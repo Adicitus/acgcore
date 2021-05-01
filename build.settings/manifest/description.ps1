@@ -1,1 +1,1 @@
-"Set of core tools used in projects Cornerstone (Formerly ACGroup)."
+"Set of core tools used in projects @ Cornerstone Group AB (Formerly ACGroup)."
