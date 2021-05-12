@@ -10,6 +10,9 @@
     'Unlock-SecureString'
     'Reset-Module'
     'New-RandomString'
+    'Get-ACGCoreRegexPattern'
+    'Get-ACGCoreRegexPatternNames'
+    'Test-ACGCoreRegexPattern'
     # Credentials
     'Load-Credential'
     'New-PSCredential'
