@@ -10,6 +10,7 @@
     'Unlock-SecureString'
     'Reset-Module'
     'New-RandomString'
+    'Create-Shortcut'
     # Credentials
     'Load-Credential'
     'New-PSCredential'
