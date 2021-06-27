@@ -11,6 +11,9 @@
     'Reset-Module'
     'New-RandomString'
     'Create-Shortcut'
+    'Get-ACGCoreRegexPattern'
+    'Get-ACGCoreRegexPatternNames'
+    'Test-ACGCoreRegexPattern'
     # Credentials
     'Load-Credential'
     'New-PSCredential'
