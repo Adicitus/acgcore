@@ -1,4 +1,4 @@
-function Save-Credential(
+function Save-PSCredential(
     [PSCredential] $Credential,
     [string] $Path,
     [switch] $UseKey,

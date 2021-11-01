@@ -1,4 +1,4 @@
-function Load-Credential {
+function Load-PSCredential {
     [CmdletBinding()]
     param(
         $Path,
