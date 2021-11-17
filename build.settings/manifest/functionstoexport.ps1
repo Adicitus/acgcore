@@ -15,9 +15,9 @@
     'Get-ACGCoreRegexPatternNames'
     'Test-ACGCoreRegexPattern'
     # Credentials
-    'Load-Credential'
+    'Load-PSCredential'
     'New-PSCredential'
-    'Save-Credential'
+    'Save-PSCredential'
     # OS
     'Add-LogonOp'
     'Query-RegValue'
