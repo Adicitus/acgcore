@@ -1,4 +1,5 @@
 @(
     "Save-Credential"
     "Load-Credential"
+    "~"
 )
