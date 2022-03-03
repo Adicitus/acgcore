@@ -17,13 +17,13 @@ function Save-PSCredential(
             }
         } else {
             $r = [System.Random]::new()
-            $bytes = [byte[]]( 0..31 | % { $r.next(0, 255) } )
+            $bytes = for($i = 0; $i -lt 32; $i++) { $r.next(0, 256) }
         }
         $convertArgs.Key = $bytes
     }
 
     $credStr = "{0}:{1}" -f $Credential.Username, (ConvertFrom-SecureString @convertArgs)
-    $credStr | Out-File -FilePath $Path -Encoding utf8
+    $credStr | Set-Content -Path $Path -Encoding UTF8
 
     if ($UseKey) {
         return [System.Convert]::ToBase64String($convertArgs.Key)

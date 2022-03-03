@@ -7,7 +7,7 @@ function Load-PSCredential {
 
     $Path = Resolve-Path $path
 
-    $credStr = [System.IO.File]::ReadAllText($path, [System.Text.Encoding]::UTF8)
+    $credStr = Get-Content -Path $path -Encoding UTF8
     $u, $p = $credStr.split(":")
     
     $ConvertArgs = @{
