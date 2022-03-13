@@ -107,14 +107,26 @@ function Render-Template{
             Mandatory=$false,
             HelpMessage='Tag used to open interpolation sections. Regular Expression.'
         )]
-		[string]$StartTag = '<<',
+		[string]$StartTag = $script:__InterpolationTags.Start,
 		[Parameter(
             Mandatory=$false,
             HelpMessage='Tag used to close interpolation sections. Regular expression.'
         )]
-		[string]$EndTag = '>>'
+		[string]$EndTag	= $script:__InterpolationTags.End
     )
 
+	
+	$script:__InterpolationTagsHistory.Push($script:__InterpolationTags)
+
+	$script:__InterpolationTags = @{
+		Start	= $StartTag
+		End		= $EndTag
+	}
+
+	trap {
+		$script:__InterpolationTags = $script:__InterpolationTagsHistory.Pop()
+		throw $_
+	}
 
 	$EndTagStart = $EndTag[0]
 	if ($EndTagStart -eq '\') {
@@ -274,6 +286,8 @@ function Render-Template{
 			}
 		}
 	}
+
+	$script:__InterpolationTags = $script:__InterpolationTagsHistory.Pop()
 	
 	$__parts__ -join ""
 
