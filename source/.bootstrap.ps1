@@ -10,5 +10,6 @@ $script:__InterpolationTagsHistory = [System.Collections.Stack]::new()
 
 
 New-Alias -Name 'Save-Credential' -Value 'Save-PSCredential'
-New-Alias -Name 'Load-Credential' -Value 'Load-PSCredential'
-New-Alias -Name '~'  -Value Unlock-SecureString
+New-Alias -Name 'Load-Credential' -Value 'Restore-PSCredential'
+New-Alias -Name 'Load-PSCredential' -Value 'Restore-PSCredential'
+New-Alias -Name '~' -Value Unlock-SecureString

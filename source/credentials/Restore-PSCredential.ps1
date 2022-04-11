@@ -8,7 +8,7 @@ Path to the file containing the credential.
 .PARAMETER Key
 DPAPI key to use when decrypting the credential (256 bits, base64 encoded).
 #>
-function Load-PSCredential {
+function Restore-PSCredential {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true, HelpMessage="Path to the file from which the credential should be loaded.")]
