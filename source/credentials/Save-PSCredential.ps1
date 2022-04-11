@@ -1,32 +1,50 @@
-function Save-PSCredential(
-    [PSCredential] $Credential,
-    [string] $Path,
-    [switch] $UseKey,
-    [string] $Key
-) {
+
+<#
+.SYNOPSIS
+Saves a PSCredential to disk as a DPAPI protected string.
+
+.PARAMETER Path
+Path to the file containing the credential.
+
+.PARAMETER UseKey
+Switch to signal that the Cmdlet should use a key when encypting the credentials.
+
+.PARAMETER Key
+A DPAPI key to use when encrypting the credential (256 bits, base64 encoded).
+
+If this is not specified, a random 256 bit key will be generated.
+#>
+function Save-PSCredential{
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true, Position=1, HelpMessage="Path to the file where the credential should be stored.")]
+        [string] $Path,
+        [Parameter(Mandatory=$true, Position=2, ValueFromPipeline=$true, HelpMessage="Credential to store.")]
+        [PSCredential] $Credential,
+        [Parameter(Mandatory=$false, HelpMessage='Signals that the credential should be protected using a DPAPI key.')]
+        [switch] $UseKey,
+        [Parameter(Mandatory=$false, HelpMessage='A base64 encoded key (256 bits) to use when encrypting the credentials. If this parameter is not specified when the $UseKey switch is set, a random key will be generated.')]
+        [string] $Key
+    ) 
 
     $convertArgs = @{
-        SecureString = $Credential.Password
+        Credential = $Credential
     }
 
     if ($UseKey) {
-        if ($Key) {
-            $bytes = [System.Convert]::FromBase64String($Key)
-            if ($bytes.count -ne 32) {
-                throw "Invalid key provided for Save-Credential (expected a Base64 string convertable to a 32 byte array)."
-            }
-        } else {
-            $r = [System.Random]::new()
-            $bytes = for($i = 0; $i -lt 32; $i++) { $r.next(0, 256) }
+        $convertArgs.UseKey = $true
+        if ($PSBoundParameters.ContainsKey('Key')) {
+            $convertArgs.Key = $Key
         }
-        $convertArgs.Key = $bytes
     }
 
-    $credStr = "{0}:{1}" -f $Credential.Username, (ConvertFrom-SecureString @convertArgs)
-    $credStr | Set-Content -Path $Path -Encoding UTF8
+    $secCred = ConvertFrom-PSCredential @convertArgs
 
     if ($UseKey) {
-        return [System.Convert]::ToBase64String($convertArgs.Key)
+        $secCred.CredentialString | Set-Content -Path $Path -Encoding UTF8
+        return $secCred.Key
+    } else {
+        $secCred | Set-Content -Path $Path -Encoding UTF8
     }
 
 }

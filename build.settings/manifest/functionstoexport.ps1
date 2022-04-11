@@ -18,6 +18,8 @@
     'Load-PSCredential'
     'New-PSCredential'
     'Save-PSCredential'
+    'ConvertFrom-PSCredential'
+    'ConvertTo-PSCredential'
     # OS
     'Add-LogonOp'
     'Query-RegValue'
