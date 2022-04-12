@@ -33,11 +33,14 @@ function ConvertFrom-PSCredential {
         [string] $Key
     )
 
+    $method = 'dpapi'
+
     $convertArgs = @{
         SecureString = $Credential.Password
     }
 
     if ($UseKey) {
+        $method = 'dpapi.key'
         if ($Key) {
             $bytes = [System.Convert]::FromBase64String($Key)
             if ($bytes.count -ne 32) {
@@ -50,7 +53,25 @@ function ConvertFrom-PSCredential {
         $convertArgs.Key = $bytes
     }
 
-    $credStr = "{0}:{1}" -f $Credential.Username, (ConvertFrom-SecureString @convertArgs)
+    $convertToBase64 = {
+        param($s)
+
+        $b      = [System.Text.Encoding]::Default.GetBytes($s)
+        $utf8b  = [System.Text.Encoding]::Convert([System.Text.Encoding]::Default, [System.Text.Encoding]::UTF8, $b)
+        $b64s   = [convert]::ToBase64String($utf8b)
+
+        return $b64s
+    }
+
+    $versionString = @{
+        m = $method
+    } | ConvertTo-Json -Compress
+
+    $credStr = @(
+        & $convertToBase64 $versionString
+        & $convertToBase64 $Credential.Username
+        (ConvertFrom-SecureString @convertArgs)
+    ) -join ":"
 
     $r = if ($UseKey) {
         @{ 
