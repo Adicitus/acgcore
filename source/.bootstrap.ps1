@@ -5,7 +5,7 @@ $script:__InterpolationTags = @{
     Start = '<<'
     End = '>>'
 }
-$script:__InterpolationTagsHistory = [System.Collections.Stack]::new()
+$script:__InterpolationTagsHistory = New-Object System.Collections.Stack
 
 
 
