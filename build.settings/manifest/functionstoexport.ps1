@@ -15,7 +15,7 @@
     'Get-ACGCoreRegexPatternNames'
     'Test-ACGCoreRegexPattern'
     # Credentials
-    'Load-PSCredential'
+    'Restore-PSCredential'
     'New-PSCredential'
     'Save-PSCredential'
     'ConvertFrom-PSCredential'
