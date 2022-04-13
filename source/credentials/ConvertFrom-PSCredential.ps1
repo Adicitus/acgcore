@@ -24,35 +24,23 @@ A base64-encoded key of 256 bits that should be used when encrypting the credent
 
 #>
 function ConvertFrom-PSCredential {
+    [CmdletBinding(DefaultParameterSetName="dpapi")]
     param(
         [Parameter(Mandatory=$true, Position=1, ValueFromPipeline=$true, HelpMessage="Credential to convert.")]
         [PSCredential] $Credential,
-        [Parameter(Mandatory=$false, HelpMessage='Signals that the credential should be protected using a DPAPI key.')]
+        [Parameter(Mandatory=$true, ParameterSetName='dpapi.key', HelpMessage='Signals that the credential should be protected using a DPAPI key.')]
         [switch] $UseKey,
-        [Parameter(Mandatory=$false, HelpMessage='A base64 encoded key to use when encrypting the credentials. If this parameter is not specified when the $UseKey switch is set, a random 256 bit key will be generated.')]
-        [string] $Key
+        [Parameter(Mandatory=$false, ParameterSetName='dpapi.key', HelpMessage='A base64 encoded key to use when encrypting the credentials. If this parameter is not specified when the $UseKey switch is set, a random 256 bit key will be generated.')]
+        [string] $Key,
+        [Parameter(Mandatory=$true, ParameterSetName='plain', HelpMessage='Disable encryption, causing the plain text be base64 encoded.')]
+        [switch] $NoEncryption,
+        [Parameter(Mandatory=$true, ParameterSetName='plain', HelpMessage='Are you completely sure you do not want to use encryption?.')]
+        [switch] $ThisIsNotProductionCode,
+        [Parameter(Mandatory=$true, ParameterSetName='plain', HelpMessage="Ok, you're the boss.")]
+        [switch] $IKnowWhatIAmDoing
     )
-
-    $method = 'dpapi'
-
-    $convertArgs = @{
-        SecureString = $Credential.Password
-    }
-
-    if ($UseKey) {
-        $method = 'dpapi.key'
-        if ($Key) {
-            $bytes = [System.Convert]::FromBase64String($Key)
-            if ($bytes.count -ne 32) {
-                throw "Invalid key provided for Save-Credential (expected a Base64 string convertable to a 32 byte array)."
-            }
-        } else {
-            $r = [System.Random]::new()
-            $bytes = for($i = 0; $i -lt 32; $i++) { $r.next(0, 256) }
-        }
-        $convertArgs.Key = $bytes
-    }
-
+    
+    # Scriptblock to convert string to Base64 string.
     $convertToBase64 = {
         param($s)
 
@@ -63,24 +51,61 @@ function ConvertFrom-PSCredential {
         return $b64s
     }
 
-    $versionString = @{
-        m = $method
-    } | ConvertTo-Json -Compress
+    $result = @{}
+    $header = @{}
+    $username = $Credential.UserName
+    $secPassword = $Credential.Password
+    $encPassword = $null
 
-    $credStr = @(
-        & $convertToBase64 $versionString
-        & $convertToBase64 $Credential.Username
-        (ConvertFrom-SecureString @convertArgs)
-    ) -join ":"
+    switch ($PSCmdlet.ParameterSetName) {
+        dpapi       {
+            $header.m = 'dpapi'
 
-    $r = if ($UseKey) {
-        @{ 
-            Key = [System.Convert]::ToBase64String($convertArgs.Key)
-            CredentialString = $credStr
+            $encPassword = ConvertFrom-SecureString -SecureString $secPassword
         }
-    } else {
-        $credStr
+
+        dpapi.key   {
+            $header.m = 'dpapi.key'
+            
+            $convertArgs = @{
+                SecureString = $secPassword
+            }
+
+            if ($Key) {
+                $bytes = [System.Convert]::FromBase64String($Key)
+                if ($bytes.count -ne 32) {
+                    throw "Invalid key provided for Save-Credential (expected a Base64 string convertable to a 32 byte array)."
+                }
+            } else {
+                $r = [System.Random]::new()
+                $bytes = for($i = 0; $i -lt 32; $i++) { $r.next(0, 256) }
+            }
+            $convertArgs.Key = $bytes
+
+            $encPassword = ConvertFrom-SecureString @ConvertArgs
+
+            $result.Key = [System.Convert]::ToBase64String($convertArgs.Key)
+        }
+
+        plain {
+            $header.m = 'plain'
+            $encPassword = & $convertToBase64 (Unlock-SecureString $secPassword)
+        }
     }
 
-    return $r
+    $headerString = $header | ConvertTo-Json -Compress
+
+    $credStr = @(
+        & $convertToBase64 $headerString
+        & $convertToBase64 $username
+        $encPassword
+    ) -join ":"
+
+    if ($result.Count -eq 0) {
+        $result = $credStr
+    } else {
+        $result.CredentialString = $credStr
+    }
+
+    return $result
 }

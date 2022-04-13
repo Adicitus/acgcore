@@ -9,6 +9,7 @@ The string representation of the PSCredential object to restore.
 A base64 key (256 bits) that should be used to decrypt the stored credential.
 #>
 function ConvertTo-PSCredential {
+    [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true, ValueFromPipeline=$true, HelpMessage="String representation of the credential to restore.")]
         [string]$CredentialString,
@@ -22,7 +23,6 @@ function ConvertTo-PSCredential {
 
     switch -Regex ($CredentialString) {
         $credStringRegex {
-            # TODO: Handle newer credential version formats.
 
             $versionBytes   = [Convert]::FromBase64String($Matches.v)
             $versionString  = [System.Text.Encoding]::UTF8.GetString($versionBytes)
@@ -44,6 +44,13 @@ function ConvertTo-PSCredential {
             }
 
             $secPassword = switch ($versionInfo.m) {
+                dpapi {
+                    # Implicit encryption using user credentials. This only works on Windows.
+                    # Assumption: The string was produced using ConvertFrom-SecureString Cmdlet.
+
+                    ConvertTo-SecureString -String $Matches.p
+                }
+
                 dpapi.Key {
                     # Explicit encryption using DPAPI with a key (128, 192 or 256 bits). This only works on Windows.
                     # Assumption: The string was produced using ConvertFrom-SecureString Cmdlet with the 'Key' parameter.
@@ -55,13 +62,6 @@ function ConvertTo-PSCredential {
                     $keyBytes = [System.Convert]::FromBase64String($key)
 
                     ConvertTo-SecureString -String $Matches.p -Key $KeyBytes
-                }
-
-                dpapi {
-                    # Implicit encryption using user credentials. This only works on Windows.
-                    # Assumption: The string was produced using ConvertFrom-SecureString Cmdlet.
-
-                    ConvertTo-SecureString -String $Matches.p
                 }
                 
                 plain {
@@ -80,8 +80,6 @@ function ConvertTo-PSCredential {
             $userString = [System.Text.Encoding]::UTF8.GetString($userBytes)
 
             return New-PSCredential -Username $userString -SecurePassword $secPassword
-
-            # TODO: Create and return a PSCredential object.
         }
 
         $legacyCredStringRegex {
