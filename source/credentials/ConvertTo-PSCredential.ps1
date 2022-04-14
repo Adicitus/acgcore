@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-Converts a DPAPI-protected string representation of a PSCredential object back into a PSCredential Object.
+Converts a portable string representation of a PSCredential object back into a PSCredential Object.
 
 .PARAMETER CredentialString
 The string representation of the PSCredential object to restore.
@@ -62,6 +62,59 @@ function ConvertTo-PSCredential {
                     $keyBytes = [System.Convert]::FromBase64String($key)
 
                     ConvertTo-SecureString -String $Matches.p -Key $KeyBytes
+                }
+
+                x509.managed {
+
+                    if ($null -eq $versionInfo.t) {
+                        $msg = "Unable to decrypt credential: Invalid credential string header. Method '{0}' specified but thumbprint is missing (no 't' field)" -f $_
+                        throw $msg
+                    }
+
+                    $cert = $null
+
+                    try {
+                        $cert = Get-ChildItem -Path Cert:\ -Recurse | Where-Object Thumbprint -eq $versionInfo.t
+                    } catch {
+                        $msg = "Unable to decrypt credential: An unexpecetd error occured when looking for thumbprint '{0}' in the certificate store." -f $versionInfo.t
+                        $ex  = New-Object System.Exception $msg $_.Exception
+                        throw $ex
+                    }
+
+                    # Verify that we found a certificate:
+                    if ($null -eq $cert) {
+                        $msg = "Unable to decrypt credential: Failed to find the certificate used to encrypt the credential string ('{0}')." -f $versionInfo.t
+                        throw $msg
+                    }
+
+                    # Verify that we retrieved only a single certificate:
+                    if ($cert -is [array]) {
+                        # More than 1 certificate found.
+                        # This should not pretty much never happen, unless the store contains duplicates of the same certificate.
+                        # Verify that they are the same certificate:
+                        $cert = $cert | Sort-Object { "Cert={1}, {0}" -f $_.Issuer, $_.SerialNumber } -Unique
+                        if ($cert -is [array]) {
+                            $msg = "Unable to decrypt credential. More than 1 certificate found for the thumbprint ('{0}')." -f $versionInfo.t
+                            throw $msg
+                        }
+                    }
+
+                    # Verify that we have the private key for certificate
+                    if (!$cert.HasPrivateKey) {
+                        $msg = "Unable to decrypt credential. No private key available for the certificate used to encrypt the credential (thumbprint '{0}')." -f $versionInfo.t
+                        throw $msg
+                    }
+
+                    $k = [System.Security.Cryptography.X509Certificates.RSACertificateExtensions]::GetRSAPrivateKey($cert)
+
+                    $passBytesEnc   = [convert]::FromBase64String($Matches.p)
+                    $passBytes      = $k.Decrypt($passBytesEnc, [System.Security.Cryptography.RSAEncryptionPadding]::Pkcs1)
+                    $passStr        = [System.Text.Encoding]::Default.GetString($passBytes)
+                    Remove-Variable 'passBytes'
+                    $passSecStr     = ConvertTo-SecureString -String $passStr -AsPlainText -Force
+                    Remove-Variable 'passStr'
+
+                    $passSecStr
                 }
                 
                 plain {

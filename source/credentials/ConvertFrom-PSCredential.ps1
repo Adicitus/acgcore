@@ -1,10 +1,10 @@
 
 <#
 .SYNOPSIS
-Converts a PSCredential object into a DPAPI-protected string representation.
+Converts a PSCredential object into a portable string representation.
 
 .DESCRIPTION
-Converts a PSCredential object into a DPAPI-protected string represenation.
+Converts a PSCredential object into a portable string represenation.
 
 If the $UseKey switch is specified, the function returns a hashtable with the
 following keys:
@@ -22,6 +22,14 @@ Switch to indicate that the credential is to be encrypted using a key.
 .PARAMETER Key
 A base64-encoded key of 256 bits that should be used when encrypting the credential (DPAPI).
 
+.PARAMETER Thumbprint
+Thumbprint of a certificate in the certificate store of the local machine.
+
+This will cause the the password to be encrypted using the certificates public key.
+
+WARNING: You will need to use the private key associated with the certificate to
+decrypt the credential. This Cmdlet does not check if the private key is available.
+
 #>
 function ConvertFrom-PSCredential {
     [CmdletBinding(DefaultParameterSetName="dpapi")]
@@ -32,6 +40,8 @@ function ConvertFrom-PSCredential {
         [switch] $UseKey,
         [Parameter(Mandatory=$false, ParameterSetName='dpapi.key', HelpMessage='A base64 encoded key to use when encrypting the credentials. If this parameter is not specified when the $UseKey switch is set, a random 256 bit key will be generated.')]
         [string] $Key,
+        [Parameter(Mandatory=$true, ParameterSetName='x509.managed', HelpMessage='Thumbprint of the certificate that should be used to encrypt the credential. Warning: you will need the corresponding private key to decrypt the credential.')]
+        [string] $Thumbprint,
         [Parameter(Mandatory=$true, ParameterSetName='plain', HelpMessage='Disable encryption, causing the plain text be base64 encoded.')]
         [switch] $NoEncryption,
         [Parameter(Mandatory=$true, ParameterSetName='plain', HelpMessage='Are you completely sure you do not want to use encryption?.')]
@@ -41,7 +51,7 @@ function ConvertFrom-PSCredential {
     )
     
     # Scriptblock to convert string to Base64 string.
-    $convertToBase64 = {
+    $convertStringToBase64 = {
         param($s)
 
         $b      = [System.Text.Encoding]::Default.GetBytes($s)
@@ -87,17 +97,70 @@ function ConvertFrom-PSCredential {
             $result.Key = [System.Convert]::ToBase64String($convertArgs.Key)
         }
 
+        x509.managed {
+            <#
+                Encrypt the credential using public key encryption via a X509 certificate found in Windows Certificate Store.
+
+                Headers:
+                    - m: Method ('x509.managed')
+                    - t: Thumbprint of the certificate used.
+            #>
+            $header.m = 'x509.managed'
+            $header.t = $Thumbprint
+
+            # Retrieve the certificate:
+            $cert = $null
+            try {
+                $cert = Get-ChildItem -Path 'Cert:\' -Recurse -ErrorAction Stop | Where-Object Thumbprint -eq $Thumbprint
+            } catch {
+                $msg = "Unexpected error while looking up the certificate ('{0}')." -f $Thumbprint
+                $ex = New-Object $msg $_
+                throw $ex
+            }
+
+            # Verify that we found a certificate:
+            if ($null -eq $cert) {
+                $msg = "Failed to find the certificate ('{0}')." -f $versionString.t
+                throw $msg
+            }
+
+            # Verify that we retrieved only a single certificate:
+            if ($cert -is [array]) {
+                # More than 1 certificate found.
+                # This should not pretty much never happen, unless the store contains duplicates of the same certificate.
+                # Verify that they are the same certificate:
+                $cert = $cert | Sort-Object { "Cert={1}, {0}" -f $_.Issuer, $_.SerialNumber } -Unique
+                if ($cert -is [array]) {
+                    $msg = "More than 1 certificate found for the thumbprint ('{0}')." -f $versionString.t
+                    throw $msg
+                }
+            }
+            
+            # Retrieve the public key:
+            $k = $cert.publicKey.Key
+            # Unlock the password securestring and turn the password into a byte array:
+            $pass = Unlock-SecureString -SecString $Credential.Password
+            $passBytes = [System.Text.Encoding]::Default.GetBytes($pass)
+            Remove-Variable 'pass'
+            # Use the public key to encrypt the password byte array:
+            $encBytes = $k.encrypt($passBytes, [System.Security.Cryptography.RSAEncryptionPadding]::Pkcs1)
+            Remove-Variable 'passBytes'
+            # Convert the encrypted byte array to Bas64 string and assign it to $encPassword:
+            $encPassword = [convert]::ToBase64String($encBytes)
+            
+        }
+
         plain {
             $header.m = 'plain'
-            $encPassword = & $convertToBase64 (Unlock-SecureString $secPassword)
+            $encPassword = & $convertStringToBase64 (Unlock-SecureString $secPassword)
         }
     }
 
     $headerString = $header | ConvertTo-Json -Compress
 
     $credStr = @(
-        & $convertToBase64 $headerString
-        & $convertToBase64 $username
+        & $convertStringToBase64 $headerString
+        & $convertStringToBase64 $username
         $encPassword
     ) -join ":"
 
