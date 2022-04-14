@@ -2,6 +2,11 @@
 .SYNOPSIS
 Converts a portable string representation of a PSCredential object back into a PSCredential Object.
 
+.DESCRIPTION
+Converts a portable string reprentation of a PSCredential object back into a PSCredential Object.
+
+Most strings contain all the information required for decryption, so this Cmdlet does not expose many parameters.
+
 .PARAMETER CredentialString
 The string representation of the PSCredential object to restore.
 
@@ -18,42 +23,48 @@ function ConvertTo-PSCredential {
     )
 
     $base64StrRegex = '[A-Za-z-0-9+\/]+=*'
-    $credStringRegex = '^(?<v>{0}):(?<u>{0}):(?<p>{0})$' -f $base64StrRegex
+    $credStringRegex = '^(?<h>{0}):(?<u>{0}):(?<p>{0})$' -f $base64StrRegex
     $legacyCredStringRegex = '^(?<u>[^:]+):(?<p>{0})$' -f $base64StrRegex
 
     switch -Regex ($CredentialString) {
         $credStringRegex {
 
-            $versionBytes   = [Convert]::FromBase64String($Matches.v)
-            $versionString  = [System.Text.Encoding]::UTF8.GetString($versionBytes)
+            $fields = @{
+                header = $Matches.h
+                username = $Matches.u
+                password = $Matches.p
+            }
+
+            $headerBytes   = [Convert]::FromBase64String($fields.header)
+            $headerString  = [System.Text.Encoding]::UTF8.GetString($headerBytes)
 
             try {
-                $versionInfo    = ConvertFrom-Json $versionString -ErrorAction Stop
+                $header = ConvertFrom-Json $headerString -ErrorAction Stop
             } catch {
-                $msg = "Failed to convert verion field: '{0}'" -f $versionString
+                $msg = "Failed to convert verion field: '{0}'" -f $headerString
                 $ex = New-Object System.Exception $msg $_.Exception
                 throw $ex
             }
 
-            if ($versionInfo -isnot [PSCustomObject]) {
-                throw "Invalid version field format: $versionString"
+            if ($header -isnot [PSCustomObject]) {
+                throw "Invalid version field format: $headerString"
             }
 
-            if ($null -eq $versionInfo.m) {
-                throw "Missing method ('m') field in version field: $versionString"
+            if ($null -eq $header.m) {
+                throw "Missing method ('m') field in version field: $headerString"
             }
 
-            $secPassword = switch ($versionInfo.m) {
+            $secPassword = switch ($header.m) {
                 dpapi {
                     # Implicit encryption using user credentials. This only works on Windows.
                     # Assumption: The string was produced using ConvertFrom-SecureString Cmdlet.
 
-                    ConvertTo-SecureString -String $Matches.p
+                    ConvertTo-SecureString -String $fields.password
                 }
 
                 dpapi.Key {
                     # Explicit encryption using DPAPI with a key (128, 192 or 256 bits). This only works on Windows.
-                    # Assumption: The string was produced using ConvertFrom-SecureString Cmdlet with the 'Key' parameter.
+                    # Assumption: The string was produced using ConvertFrom-PSCredential Cmdlet with the 'Key' parameter.
 
                     if (-not $PSBoundParameters.ContainsKey('Key')) {
                         throw "Credential is DPAPI key-encrypted, but no value provided for 'Key' parameter."
@@ -61,12 +72,14 @@ function ConvertTo-PSCredential {
 
                     $keyBytes = [System.Convert]::FromBase64String($key)
 
-                    ConvertTo-SecureString -String $Matches.p -Key $KeyBytes
+                    ConvertTo-SecureString -String $fields.password -Key $KeyBytes
                 }
 
                 x509.managed {
+                    # Explicit encryption using a X509 certificate found in the certificate store on this computer.
+                    # NOTE: The private key associated with the certificate must be available, otherwise the decryption will fail.
 
-                    if ($null -eq $versionInfo.t) {
+                    if ($null -eq $header.t) {
                         $msg = "Unable to decrypt credential: Invalid credential string header. Method '{0}' specified but thumbprint is missing (no 't' field)" -f $_
                         throw $msg
                     }
@@ -74,16 +87,16 @@ function ConvertTo-PSCredential {
                     $cert = $null
 
                     try {
-                        $cert = Get-ChildItem -Path Cert:\ -Recurse | Where-Object Thumbprint -eq $versionInfo.t
+                        $cert = Get-ChildItem -Path Cert:\ -Recurse | Where-Object Thumbprint -eq $header.t
                     } catch {
-                        $msg = "Unable to decrypt credential: An unexpecetd error occured when looking for thumbprint '{0}' in the certificate store." -f $versionInfo.t
+                        $msg = "Unable to decrypt credential: An unexpecetd error occured when looking for thumbprint '{0}' in the certificate store." -f $header.t
                         $ex  = New-Object System.Exception $msg $_.Exception
                         throw $ex
                     }
 
                     # Verify that we found a certificate:
                     if ($null -eq $cert) {
-                        $msg = "Unable to decrypt credential: Failed to find the certificate used to encrypt the credential string ('{0}')." -f $versionInfo.t
+                        $msg = "Unable to decrypt credential: Failed to find the certificate used to encrypt the credential string ('{0}')." -f $header.t
                         throw $msg
                     }
 
@@ -94,20 +107,20 @@ function ConvertTo-PSCredential {
                         # Verify that they are the same certificate:
                         $cert = $cert | Sort-Object { "Cert={1}, {0}" -f $_.Issuer, $_.SerialNumber } -Unique
                         if ($cert -is [array]) {
-                            $msg = "Unable to decrypt credential. More than 1 certificate found for the thumbprint ('{0}')." -f $versionInfo.t
+                            $msg = "Unable to decrypt credential. More than 1 certificate found for the thumbprint ('{0}')." -f $header.t
                             throw $msg
                         }
                     }
 
                     # Verify that we have the private key for certificate
                     if (!$cert.HasPrivateKey) {
-                        $msg = "Unable to decrypt credential. No private key available for the certificate used to encrypt the credential (thumbprint '{0}')." -f $versionInfo.t
+                        $msg = "Unable to decrypt credential. No private key available for the certificate used to encrypt the credential (thumbprint '{0}')." -f $header.t
                         throw $msg
                     }
 
                     $k = [System.Security.Cryptography.X509Certificates.RSACertificateExtensions]::GetRSAPrivateKey($cert)
 
-                    $passBytesEnc   = [convert]::FromBase64String($Matches.p)
+                    $passBytesEnc   = [convert]::FromBase64String($fields.password)
                     $passBytes      = $k.Decrypt($passBytesEnc, [System.Security.Cryptography.RSAEncryptionPadding]::Pkcs1)
                     $passStr        = [System.Text.Encoding]::Default.GetString($passBytes)
                     Remove-Variable 'passBytes'
@@ -119,17 +132,18 @@ function ConvertTo-PSCredential {
                 
                 plain {
                     # Plain Text encyption, this is only available for debug/testing/demo purposes.
-                    $passBytes  = [Convert]::FromBase64String($Matches.p)
+                    $passBytes  = [Convert]::FromBase64String($fields.password)
                     $passString = [System.Text.Encoding]::UTF8.GetString($passBytes)
                     ConvertTo-SecureString -String $passString -AsPlainText -Force
                 }
 
                 default {
-                    $msg = "Unrecognized encryption method: {0}" -f $versionInfo.m 
+                    $msg = "Unrecognized encryption method in credential header: {0}" -f $header.m
+                    throw $msg
                 }
             }
 
-            $userBytes  = [Convert]::FromBase64String($Matches.u)
+            $userBytes  = [Convert]::FromBase64String($fields.username)
             $userString = [System.Text.Encoding]::UTF8.GetString($userBytes)
 
             return New-PSCredential -Username $userString -SecurePassword $secPassword

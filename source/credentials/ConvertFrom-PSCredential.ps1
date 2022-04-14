@@ -27,6 +27,15 @@ Thumbprint of a certificate in the certificate store of the local machine.
 
 This will cause the the password to be encrypted using the certificates public key.
 
+The Cmdlet will look in the entire store for a certificate with the given thumbprint.
+
+If more than 1 certificate is found with the thumbprint, the Cmdlet will verify that they
+are in fact duplicate copies of the same certificate by check that they have the same Issuer
+and Serial Number.
+
+If more than 1 certificate are found to have the same thumbprint this Cmdlet will throw
+an exception.
+
 WARNING: You will need to use the private key associated with the certificate to
 decrypt the credential. This Cmdlet does not check if the private key is available.
 
