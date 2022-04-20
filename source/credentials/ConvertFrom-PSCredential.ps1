@@ -117,45 +117,7 @@ function ConvertFrom-PSCredential {
             $header.m = 'x509.managed'
             $header.t = $Thumbprint
 
-            # Retrieve the certificate:
-            $cert = $null
-            try {
-                $cert = Get-ChildItem -Path 'Cert:\' -Recurse -ErrorAction Stop | Where-Object Thumbprint -eq $Thumbprint
-            } catch {
-                $msg = "Unexpected error while looking up the certificate ('{0}')." -f $Thumbprint
-                $ex = New-Object $msg $_
-                throw $ex
-            }
-
-            # Verify that we found a certificate:
-            if ($null -eq $cert) {
-                $msg = "Failed to find the certificate ('{0}')." -f $versionString.t
-                throw $msg
-            }
-
-            # Verify that we retrieved only a single certificate:
-            if ($cert -is [array]) {
-                # More than 1 certificate found.
-                # This should not pretty much never happen, unless the store contains duplicates of the same certificate.
-                # Verify that they are the same certificate:
-                $cert = $cert | Sort-Object { "Cert={1}, {0}" -f $_.Issuer, $_.SerialNumber } -Unique
-                if ($cert -is [array]) {
-                    $msg = "More than 1 certificate found for the thumbprint ('{0}')." -f $versionString.t
-                    throw $msg
-                }
-            }
-            
-            # Retrieve the public key:
-            $k = $cert.publicKey.Key
-            # Unlock the password securestring and turn the password into a byte array:
-            $pass = Unlock-SecureString -SecString $Credential.Password
-            $passBytes = [System.Text.Encoding]::Default.GetBytes($pass)
-            Remove-Variable 'pass'
-            # Use the public key to encrypt the password byte array:
-            $encBytes = $k.encrypt($passBytes, [System.Security.Cryptography.RSAEncryptionPadding]::Pkcs1)
-            Remove-Variable 'passBytes'
-            # Convert the encrypted byte array to Bas64 string and assign it to $encPassword:
-            $encPassword = [convert]::ToBase64String($encBytes)
+            $encPassword = convertTo-CertificateSecuredString -SecureString $Credential.Password -Thumbprint $Thumbprint
             
         }
 

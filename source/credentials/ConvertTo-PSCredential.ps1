@@ -17,6 +17,7 @@ function ConvertTo-PSCredential {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true, ValueFromPipeline=$true, HelpMessage="String representation of the credential to restore.")]
+        [ValidatePattern('[a-z0-9+/]+={0,2}:[a-z0-9+/]+={0,2}:[a-z0-9+/]+={0,2}')]
         [string]$CredentialString,
         [Parameter(Mandatory=$false, HelpMessage="DPAPI key to use when decrypting the credential (256 bits, base64 encoded).")]
         [string]$Key
@@ -47,11 +48,11 @@ function ConvertTo-PSCredential {
             }
 
             if ($header -isnot [PSCustomObject]) {
-                throw "Invalid version field format: $headerString"
+                throw "Invalid header field format: $headerString"
             }
 
             if ($null -eq $header.m) {
-                throw "Missing method ('m') field in version field: $headerString"
+                throw "Missing method ('m') field in header field: $headerString"
             }
 
             $secPassword = switch ($header.m) {
@@ -84,50 +85,13 @@ function ConvertTo-PSCredential {
                         throw $msg
                     }
 
-                    $cert = $null
-
                     try {
-                        $cert = Get-ChildItem -Path Cert:\ -Recurse | Where-Object Thumbprint -eq $header.t
+                        ConvertFrom-CertificateSecuredString -CertificateSecuredString $fields.password -Thumbprint $header.t
                     } catch {
-                        $msg = "Unable to decrypt credential: An unexpecetd error occured when looking for thumbprint '{0}' in the certificate store." -f $header.t
-                        $ex  = New-Object System.Exception $msg $_.Exception
+                        $msg = "Failed to decrypt the credential using certificat (Thumbprint: {0}). See inner exception for details." -f $header.t
+                        $ex = New-Object System.Exception $msg, $_.Exception
                         throw $ex
                     }
-
-                    # Verify that we found a certificate:
-                    if ($null -eq $cert) {
-                        $msg = "Unable to decrypt credential: Failed to find the certificate used to encrypt the credential string ('{0}')." -f $header.t
-                        throw $msg
-                    }
-
-                    # Verify that we retrieved only a single certificate:
-                    if ($cert -is [array]) {
-                        # More than 1 certificate found.
-                        # This should not pretty much never happen, unless the store contains duplicates of the same certificate.
-                        # Verify that they are the same certificate:
-                        $cert = $cert | Sort-Object { "Cert={1}, {0}" -f $_.Issuer, $_.SerialNumber } -Unique
-                        if ($cert -is [array]) {
-                            $msg = "Unable to decrypt credential. More than 1 certificate found for the thumbprint ('{0}')." -f $header.t
-                            throw $msg
-                        }
-                    }
-
-                    # Verify that we have the private key for certificate
-                    if (!$cert.HasPrivateKey) {
-                        $msg = "Unable to decrypt credential. No private key available for the certificate used to encrypt the credential (thumbprint '{0}')." -f $header.t
-                        throw $msg
-                    }
-
-                    $k = [System.Security.Cryptography.X509Certificates.RSACertificateExtensions]::GetRSAPrivateKey($cert)
-
-                    $passBytesEnc   = [convert]::FromBase64String($fields.password)
-                    $passBytes      = $k.Decrypt($passBytesEnc, [System.Security.Cryptography.RSAEncryptionPadding]::Pkcs1)
-                    $passStr        = [System.Text.Encoding]::Default.GetString($passBytes)
-                    Remove-Variable 'passBytes'
-                    $passSecStr     = ConvertTo-SecureString -String $passStr -AsPlainText -Force
-                    Remove-Variable 'passStr'
-
-                    $passSecStr
                 }
                 
                 plain {
@@ -138,7 +102,7 @@ function ConvertTo-PSCredential {
                 }
 
                 default {
-                    $msg = "Unrecognized encryption method in credential header: {0}" -f $header.m
+                    $msg = "Unrecognized encryption method in credential header ('{0}'). This may indicate that you are using an out-dated version of the Cmdlet." -f $header.m
                     throw $msg
                 }
             }
