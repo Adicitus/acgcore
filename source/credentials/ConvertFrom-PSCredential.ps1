@@ -96,7 +96,7 @@ function ConvertFrom-PSCredential {
                     throw "Invalid key provided for Save-Credential (expected a Base64 string convertable to a 32 byte array)."
                 }
             } else {
-                $r = [System.Random]::new()
+                $r = $script:__RNG
                 $bytes = for($i = 0; $i -lt 32; $i++) { $r.next(0, 256) }
             }
             $convertArgs.Key = $bytes
