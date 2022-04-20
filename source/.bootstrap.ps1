@@ -1,4 +1,7 @@
-$script:__RNG = New-Object System.Random
+$osInfo = Get-WmiObject Win32_OperatingSystem
+$seed = ($osInfo.FreePhysicalMemory + $osInfo.NumberOfProcesses + [datetime]::Now.Ticks) % [int]::MaxValue
+$script:__RNG = New-Object System.Random $seed
+Remove-Variable 'seed'
 
 # Render-Template variables:
 $script:__InterpolationTags = @{
