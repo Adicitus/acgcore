@@ -87,23 +87,18 @@ function ConvertFrom-PSCredential {
             $header.m = 'dpapi.key'
             
             $convertArgs = @{
-                SecureString = $secPassword
+                SecureString    = $secPassword
+                UseDPAPIKey     = $true
             }
 
-            if ($Key) {
-                $bytes = [System.Convert]::FromBase64String($Key)
-                if ($bytes.count -ne 32) {
-                    throw "Invalid key provided for Save-Credential (expected a Base64 string convertable to a 32 byte array)."
-                }
-            } else {
-                $r = $script:__RNG
-                $bytes = for($i = 0; $i -lt 32; $i++) { $r.next(0, 256) }
+            if ($PSBoundParameters.ContainsKey($Key)) {
+                $convertArgs.Key = $Key
             }
-            $convertArgs.Key = $bytes
 
-            $encPassword = ConvertFrom-SecureString @ConvertArgs
+            $r = Export-SecureString @ConvertArgs
 
-            $result.Key = [System.Convert]::ToBase64String($convertArgs.Key)
+            $result.Key = $r.Key
+            $encPassword = $r.String
         }
 
         x509.managed {

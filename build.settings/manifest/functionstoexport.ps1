@@ -17,6 +17,8 @@
     'Unlock-SecureString'
     'ConvertTo-CertificateSecuredString'
     'ConvertFrom-CertificateSecuredString'
+    'Import-SecureString'
+    'Export-SecureString'
     # Credentials
     'Restore-PSCredential'
     'New-PSCredential'

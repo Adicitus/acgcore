@@ -60,7 +60,7 @@ function ConvertTo-PSCredential {
                     # Implicit encryption using user credentials. This only works on Windows.
                     # Assumption: The string was produced using ConvertFrom-SecureString Cmdlet.
 
-                    ConvertTo-SecureString -String $fields.password
+                    Import-SecureString -String $fields.password
                 }
 
                 dpapi.Key {
@@ -71,9 +71,7 @@ function ConvertTo-PSCredential {
                         throw "Credential is DPAPI key-encrypted, but no value provided for 'Key' parameter."
                     }
 
-                    $keyBytes = [System.Convert]::FromBase64String($key)
-
-                    ConvertTo-SecureString -String $fields.password -Key $KeyBytes
+                    Import-SecureString -String $fields.password -DPAPIKey $Key
                 }
 
                 x509.managed {
@@ -86,7 +84,7 @@ function ConvertTo-PSCredential {
                     }
 
                     try {
-                        ConvertFrom-CertificateSecuredString -CertificateSecuredString $fields.password -Thumbprint $header.t
+                        Import-SecureString -String $fields.password -Thumbprint $header.t -ErrorAction Stop
                     } catch {
                         $msg = "Failed to decrypt the credential using certificat (Thumbprint: {0}). See inner exception for details." -f $header.t
                         $ex = New-Object System.Exception $msg, $_.Exception
@@ -98,7 +96,7 @@ function ConvertTo-PSCredential {
                     # Plain Text encyption, this is only available for debug/testing/demo purposes.
                     $passBytes  = [Convert]::FromBase64String($fields.password)
                     $passString = [System.Text.Encoding]::UTF8.GetString($passBytes)
-                    ConvertTo-SecureString -String $passString -AsPlainText -Force
+                    Import-SecureString -String $passString -NoEncryption
                 }
 
                 default {
