@@ -12,18 +12,20 @@ The string representation of the PSCredential object to restore.
 
 .PARAMETER Key
 A base64 key (256 bits) that should be used to decrypt the stored credential.
+
+.OUTPUTS
+[SecureString]
 #>
 function ConvertTo-PSCredential {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true, ValueFromPipeline=$true, HelpMessage="String representation of the credential to restore.")]
-        [ValidatePattern('[a-z0-9+/]+={0,2}:[a-z0-9+/]+={0,2}:[a-z0-9+/]+={0,2}')]
         [string]$CredentialString,
         [Parameter(Mandatory=$false, HelpMessage="DPAPI key to use when decrypting the credential (256 bits, base64 encoded).")]
         [string]$Key
     )
 
-    $base64StrRegex = '[A-Za-z-0-9+\/]+=*'
+    $base64StrRegex = '[A-Za-z-0-9+\/]+={0,2}'
     $credStringRegex = '^(?<h>{0}):(?<u>{0}):(?<p>{0})$' -f $base64StrRegex
     $legacyCredStringRegex = '^(?<u>[^:]+):(?<p>{0})$' -f $base64StrRegex
 
@@ -42,7 +44,7 @@ function ConvertTo-PSCredential {
             try {
                 $header = ConvertFrom-Json $headerString -ErrorAction Stop
             } catch {
-                $msg = "Failed to convert verion field: '{0}'" -f $headerString
+                $msg = "Failed to read header field: '{0}'" -f $headerString
                 $ex = New-Object System.Exception $msg $_.Exception
                 throw $ex
             }
