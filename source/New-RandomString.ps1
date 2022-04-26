@@ -5,7 +5,7 @@ Generates a new random string of a given length using the given pool of candidat
 .PARAMETER Length
 Number of characters in the string.
 
-Minimum length is 1. Default is 8.
+Minimum length is 0. Default is 8.
 
 .PARAMETER Characters
 String of candidate characters that will be used in the generated string.
@@ -16,6 +16,14 @@ generated string.
 Minimum length is 1.
 
 This defaults to "abcdefghijklmnopqrstuvwxyz0123456789-_".
+
+.PARAMETER CharacterSet
+Alternatively to specifying a string of candidate Characters, use a predefined set:
+    - Binary: 0 and 1
+    - Base8: Numbers 0-7
+    - Base16: Numbers 0-9 and characters a-f
+    - Alphanumeric: All characters from the english alphabet (a-z) and numbers 0-9.
+    - Base64: All characters a-z, numbers 0-9 and the symbols '+', '/' ('=' is excluded because it is used for padding and MUST appear at the end of the string).
 
 .PARAMETER ReturnType
 The type of object to return:
@@ -29,14 +37,17 @@ Return the generated string as a SecureString instead of a plain String.
 
 #>
 function New-RandomString {
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName="Candidates")]
     param(
         [Parameter(Mandatory=$false, HelpMessage="Length of the string to generate.")]
         [ValidateScript({if ($_ -ge 0) { return $true }; throw "Invalid Length requested ($_), cannot generate a string of negative length." })]
         [int]$Length=8,
-        [Parameter(Mandatory=$false, HelpMessage="String of candidate characters.")]
+        [Parameter(Mandatory=$false, ParameterSetName="Candidates", HelpMessage="String of candidate characters.")]
         [ValidateNotNullOrEmpty()]
         [string]$Characters="abcdefghijklmnopqrstuvwxyz0123456789-_",
+        [Parameter(Mandatory=$true, ParameterSetName="CharacterSet", HelpMessage="The set of characters that the string should consist of.")]
+        [ValidateSet('Binary', 'Base8', 'Base10', 'Base16', 'Alphanumeric', 'Base64')]
+        [string]$CharacterSet,
         [Parameter(Mandatory=$false, HelpMessage="Format to return the string in (default 'String').")]
         [ValidateSet("String", "Base64", "Bytes", "SecureString")]
         [string]$ReturnFormat="String",
@@ -49,6 +60,29 @@ function New-RandomString {
     if ($Length -eq 0) {
         # Zero length string requested, return empty string. 
         return ""
+    }
+
+    if ($PSCmdlet.ParameterSetName -eq "CharacterSet") {
+        $Characters = switch ($CharacterSet) {
+            Binary {
+                "01"
+            }
+            Base8 {
+                "01234567"
+            }
+            Base10 {
+                "0123456789"
+            }
+            Base16 {
+                "0123456789abcdef"
+            }
+            Alphanumeric {
+                "0123456789abcdefghijklmnopqrstuvwxyz"
+            }
+            Base64 {
+                "0123456789abcdefghijklmnopqrstuvwxyz+/"
+            }
+        }
     }
 
     $rng = $script:__RNG
