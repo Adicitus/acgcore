@@ -3,4 +3,5 @@
     "Load-Credential"
     "Load-PSCredential"
     "~"
+    "Parse-ConfigFile"
 )

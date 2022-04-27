@@ -1,6 +1,6 @@
 @(
     # Core
-    'Parse-ConfigFile'
+    'Read-ConfigFile'
     'RegexPatterns'
     'Render-Template'
     'Run-Operation'

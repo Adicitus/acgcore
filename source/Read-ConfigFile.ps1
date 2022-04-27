@@ -110,7 +110,7 @@ Stop the parser from throwing an exception on error (use MetaData object to reco
 .NOTES
 General notes
 #>
-function Parse-ConfigFile {
+function Read-ConfigFile {
     [CmdletBinding(DefaultParameterSetName="File")]
     param (
         [parameter(

@@ -17,3 +17,4 @@ New-Alias -Name 'Save-Credential' -Value 'Save-PSCredential'
 New-Alias -Name 'Load-Credential' -Value 'Restore-PSCredential'
 New-Alias -Name 'Load-PSCredential' -Value 'Restore-PSCredential'
 New-Alias -Name '~' -Value Unlock-SecureString
+New-Alias -Name 'Parse-ConfigFile' -Value 'Read-ConfigFile'
