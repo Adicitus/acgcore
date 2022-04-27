@@ -32,7 +32,7 @@
     'Set-ProcessPrivilege'
     'Set-RegValue'
     'Steal-RegKey'
-    #Text
+    #Strings
     'ConvertTo-UnicodeEscapedString'
     'ConvertFrom-UnicodeEscapedString'
 )

@@ -15,6 +15,9 @@ associated private key, the Cmdlet will throw an exception.
 
 .PARAMETER NoEncryption
 Indicates that the string is not encrypted an should be imported as-is.
+
+This is functionally the same as writing (for a given string $s):
+    ConvertTo-SecureString -String $s -AsPlaintext -Force
 #>
 Function Import-SecureString {
     [CmdletBinding(DefaultParameterSetName='dpapi')]
