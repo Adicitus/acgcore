@@ -90,9 +90,18 @@ function Render-Template{
     param(
         [parameter(
             Mandatory=$true,
+            Position=1,
+            ParameterSetName="TemplatePath",
             HelpMessage="Path to the template file that should be rendered. Available when rendering."
         )]
         [String]$TemplatePath,
+        [parameter(
+            Mandatory=$true,
+            Position=1,
+            ParameterSetName="TemplateString",
+            HelpMessage="Path to the template file that should be rendered. Available when rendering."
+        )]
+        [String]$TemplateString,
         [parameter(
             Mandatory=$true,
             HelpMessage="Hashtable with values used when interpolating expressions in the template. Available when rendering."
@@ -160,93 +169,78 @@ function Render-Template{
 		$script:__RenderCache = $Cache
     }
 
-	$templatePath = Resolve-Path $templatePath
+	# Getting template string:
+	$template = $null
+	switch ($PSCmdlet.ParameterSetName) {
+		TemplatePath {
+			# Loading template from file, and adding it to cache:
+			$templatePath = Resolve-Path $templatePath
 
-	Write-Debug "Path resolved to '$templatePath'"
+			Write-Debug "Path resolved to '$templatePath'"
 
-    $template = $null
+			if ($Cache.ContainsKey($templatePath)) {
+				Write-Debug "Found path in cache..."
+				try {
+					$item = Get-Item $TemplatePath
+					if ($item.LastWriteTime.Ticks -gt $Cache[$templatePath].LoadTime.Ticks) {
+						Write-Debug "Cache is out-of-date, reloading..."
+						$t = [System.IO.File]::ReadAllText($templatePath)
+						$Cache[$templatePath] = @{ Value = $t; LoadTime = [datetime]::now }
+					}
+				} catch { <# Do nothing for now #> }
+				$template = $Cache[$templatePath].Value
+			} else {
+				Write-Debug "Not in cache, loading..."
+				$template = [System.IO.File]::ReadAllText($templatePath)
+				$Cache[$templatePath] = @{ Value = $template; LoadTime = [datetime]::now }
+			}
+		}
 
-    if ($Cache.ContainsKey($templatePath)) {
-		Write-Debug "Found path in cache..."
-		try {
-            $item = Get-Item $TemplatePath
-            if ($item.LastWriteTime.Ticks -gt $Cache[$templatePath].LoadTime.Ticks) {
-                Write-Debug "Cache is out-of-date, reloading..."
-				$t = [System.IO.File]::ReadAllText($templatePath)
-                $Cache[$templatePath] = @{ Value = $t; LoadTime = [datetime]::now }
-            }
-        } catch { <# Do nothing for now #> }
-        $template = $Cache[$templatePath].Value
-    } else {
-		Write-Debug "Not in cache, loading..."
-        $template = [System.IO.File]::ReadAllText($templatePath)
-        $Cache[$templatePath] = @{ Value = $template; LoadTime = [datetime]::now }
-    }
+		TemplateString {
+			$template = $TemplateString
+		}
+	}
 
     # Move Cache out of the of possible user-space values.
     $__RenderCache = $Cache
     Remove-Variable "Cache"
 
 	# Defining TemplateDir here to make it accessible when evaluating scriptblocks.
-    $TemplateDir = $templatePath | Split-Path -Parent
-    
-	if (!$__RenderCache[$templatePath].ContainsKey("Digest")) {
-		$__buildDigest = {
-			param($templateCache)
-			
-			Write-Debug "Building digest..."
-			$__c__ = $templateCache
-			$__c__.Digest = @()
-			
-			$__regex__ = New-Object regex ($InterpolationRegex, [System.Text.RegularExpressions.RegexOptions]::Multiline)
-			$__meta__ = @{ LastIndex = 0 }
-			
-			$__regex__.Replace(
-				$template,
-				{
-					param($match)
-					# Isolate information about the expression.
-					$__li__ = $__meta__.LastIndex
-					$__g0__ = $match.Groups[0]
-					$__path__	= $match.Groups["path"]
-					$__command__= $match.Groups["command"]
-					
-					# Collect string literal preceeding this expression and add it to the digest.
-					$__ls__ = $template.Substring($__li__, ($__g0__.index - $__li__))
-					$__meta__.LastIndex = $__g0__.index + $__g0__.length
-					$__c__.Digest += $__ls__
-					
-					# Process the expression:
-					if ($__command__.Success) {
-						# Expression is a command: turn it into a script block and add it to the digest.
-						$__c__.Digest += [scriptblock]::create($__command__.value)
-					} elseif ($__path__.Success){
-						# Expand any variables in the path and add the expanded path to digest:
-						$p = $ExecutionContext.InvokeCommand.ExpandString($__path__.Value)
-						$__c__.Digest += @{ path=$p }						
-					}
-					
-					$__meta__ | Out-String | Write-Debug
-					
-				}
-			) | Out-Null
-			
-			
-			if ($__meta__.LastIndex -lt $template.length) {
-				$__c__.Digest += $template.substring($__meta__.LastIndex)
-			}
+    $TemplateDir = switch ($PSCmdlet.ParameterSetName) {
+		TemplatePath {
+			$templatePath | Split-Path -Parent
 		}
+		TemplateString {
+			# Using a template string, so use current working directory:
+			$pwd.Path
+		}
+	}
+    
+	# Get the digest of the template string:
+	$__digest__ = switch ($PSCmdlet.ParameterSetName) {
+		TemplatePath {
+			# Using a template file, check if we already have a digest in the cache:
+			if (!$__RenderCache[$templatePath].ContainsKey("Digest")) {
+				_buildTemplateDigest $template $StartTag $EndTag $__RenderCache[$templatePath]
+			}
 
-		& $__buildDigest $__RenderCache[$templatePath]
+			$__RenderCache[$templatePath].Digest
+		}
+		TemplateString {
+			# Using a template string, don't add it to the cache:
+			$c = @{}
+			_buildTemplateDigest $template $StartTag $EndTag $c
+			$c.Digest
+		}
 	}
 	
 	# Expand values into user-space to make them more accessible during render.
-    $values.GetEnumerator() | % {
+    $values.GetEnumerator() | ForEach-Object {
         New-Variable $_.Name $_.Value
     }
 	
 	Write-Debug "Starting Render..."
-	$__parts__ = $__RenderCache[$templatePath].Digest | % {
+	$__parts__ = $__digest__ | ForEach-Object {
 		$__part__ = $_
 		switch ($__part__.GetType()) {
 			"hashtable" {
