@@ -59,7 +59,7 @@ function ConvertTo-CertificateSecuredString {
 
             # Verify that we found a certificate:
             if ($null -eq $cert) {
-                $msg = "Failed to find the certificate ('{0}')." -f $versionString.t
+                $msg = "Failed to find the certificate ('{0}')." -f $Thumbprint
                 throw $msg
             }
 
@@ -70,7 +70,7 @@ function ConvertTo-CertificateSecuredString {
                 # Verify that they are the same certificate:
                 $cert = $cert | Sort-Object { "Cert={1}, {0}" -f $_.Issuer, $_.SerialNumber } -Unique
                 if ($cert -is [array]) {
-                    $msg = "More than 1 certificate found for the thumbprint ('{0}')." -f $versionString.t
+                    $msg = "More than 1 certificate found for the thumbprint ('{0}')." -f $Thumbprint
                     throw $msg
                 }
             }
