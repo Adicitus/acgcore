@@ -4,4 +4,5 @@
     "Load-PSCredential"
     "~"
     "Parse-ConfigFile"
+    "Create-Shortcut"
 )

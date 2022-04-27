@@ -1,6 +1,6 @@
-# CreateShortcut.ps1
+# New-Shortcut.ps1
 
-function Create-Shortcut(){
+function New-Shortcut(){
     param(
         [parameter(Mandatory=$true, position=1)][String]$ShortcutPath,
         [parameter(Mandatory=$true, position=2)][String]$TargetPath,
@@ -12,8 +12,6 @@ function Create-Shortcut(){
         $shortcutDir  = $Matches.directory
         $shortcutFile = $Matches.filename
     } else {
-        shoutOut "Invalid path: " Error -NoNewline
-		shoutOut "$shortcutPath" Error
         return $false
     }
 

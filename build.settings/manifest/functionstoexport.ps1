@@ -9,7 +9,7 @@
     'Write-ConfigFile'
     'Reset-Module'
     'New-RandomString'
-    'Create-Shortcut'
+    'New-Shortcut'
     'Get-ACGCoreRegexPattern'
     'Get-ACGCoreRegexPatternNames'
     'Test-ACGCoreRegexPattern'
