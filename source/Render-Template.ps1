@@ -50,13 +50,13 @@ The default end tag is '>>'.
 .EXAMPLE
 Contents of .\page.template.html:
     <h1><<$Title>></he1>
-	<h2><<$values.Chapter1>></h2>
-	
-	<<(.\pages\1.html)>>
+    <h2><<$values.Chapter1>></h2>
+    
+    <<(.\pages\1.html)>>
 
 Contents of .\pages\1.html:
 
-	It was the best of times, it was the worst of times.
+    It was the best of times, it was the worst of times.
 
 Running:
     $details = @{
@@ -67,9 +67,9 @@ Running:
 
 Will yield:
     <h1>A tale of two cities</h1>
-	<h2>The Period</h2>
-	
-	It was the best of times, it was the worst of times.
+    <h2>The Period</h2>
+    
+    It was the best of times, it was the worst of times.
 
 
 .NOTES
@@ -111,179 +111,172 @@ function Render-Template{
             Mandatory=$false,
             HelpMessage='Optional Hashtable used to cache the content of files once they are loaded. Pass in a hashtable to retain cache between calls. Available as $__RenderCache when rendering.'
         )]
-		[hashtable]$Cache = $null,
-		[Parameter(
+        [hashtable]$Cache = $null,
+        [Parameter(
             Mandatory=$false,
             HelpMessage='Tag used to open interpolation sections. Regular Expression.'
         )]
-		[string]$StartTag = $script:__InterpolationTags.Start,
-		[Parameter(
+        [string]$StartTag = $script:__InterpolationTags.Start,
+        [Parameter(
             Mandatory=$false,
             HelpMessage='Tag used to close interpolation sections. Regular expression.'
         )]
-		[string]$EndTag	= $script:__InterpolationTags.End
+        [string]$EndTag    = $script:__InterpolationTags.End
     )
 
-	
-	$script:__InterpolationTagsHistory.Push($script:__InterpolationTags)
+    
+    $script:__InterpolationTagsHistory.Push($script:__InterpolationTags)
 
-	$script:__InterpolationTags = @{
-		Start	= $StartTag
-		End		= $EndTag
-	}
+    $script:__InterpolationTags = @{
+        Start    = $StartTag
+        End        = $EndTag
+    }
 
-	trap {
-		$script:__InterpolationTags = $script:__InterpolationTagsHistory.Pop()
-		throw $_
-	}
+    trap {
+        $script:__InterpolationTags = $script:__InterpolationTagsHistory.Pop()
+        throw $_
+    }
 
-	$EndTagStart = $EndTag[0]
-	if ($EndTagStart -eq '\') {
-		$EndTagStart.Substring(0, 2)
-	}
-	$EndTagRemainder = $EndTag.Substring($EndTagStart.Length)
-	$InterpolationRegex = "{0}(\((?<path>.+)\)|(?<command>([^{1}]|{1}(?!{2}))+)){3}" -f $StartTag, $EndTagStart, $EndTagRemainder, $EndTag
-
-	if ($Cache) {
-		Write-Debug "Cache provided by caller, updating global."
-		$script:__RenderCache = $Cache
-	}
+    if ($Cache) {
+        Write-Debug "Cache provided by caller, updating global."
+        $script:__RenderCache = $Cache
+    }
 
     if ($null -eq $Cache) { 
         
         Write-Debug "Looking for cache..."
         
-		if ($Cache = $script:__RenderCache) {
-			Write-Debug "Using global cache."
-		} elseif ($cacheVar = $PSCmdlet.SessionState.PSVariable.Get("__RenderCache")) {
-			# This is a recursive call, we can reuse the cache from parent.
-			$Cache = $cacheVar.Value
-			Write-Debug "Found cache in parent context."
-		}
+        if ($Cache = $script:__RenderCache) {
+            Write-Debug "Using global cache."
+        } elseif ($cacheVar = $PSCmdlet.SessionState.PSVariable.Get("__RenderCache")) {
+            # This is a recursive call, we can reuse the cache from parent.
+            $Cache = $cacheVar.Value
+            Write-Debug "Found cache in parent context."
+        }
 
     }
 
     if ($null -eq $cache) {
         Write-Debug "Failed to get cache from parent. Creating new cache."
         $Cache = @{}
-		$script:__RenderCache = $Cache
+        $script:__RenderCache = $Cache
     }
 
-	# Getting template string:
-	$template = $null
-	switch ($PSCmdlet.ParameterSetName) {
-		TemplatePath {
-			# Loading template from file, and adding it to cache:
-			$templatePath = Resolve-Path $templatePath
+    # Getting template string:
+    $template = $null
+    switch ($PSCmdlet.ParameterSetName) {
+        TemplatePath {
+            # Loading template from file, and adding it to cache:
+            $templatePath = Resolve-Path $templatePath
 
-			Write-Debug "Path resolved to '$templatePath'"
+            Write-Debug "Path resolved to '$templatePath'"
 
-			if ($Cache.ContainsKey($templatePath)) {
-				Write-Debug "Found path in cache..."
-				try {
-					$item = Get-Item $TemplatePath
-					if ($item.LastWriteTime.Ticks -gt $Cache[$templatePath].LoadTime.Ticks) {
-						Write-Debug "Cache is out-of-date, reloading..."
-						$t = [System.IO.File]::ReadAllText($templatePath)
-						$Cache[$templatePath] = @{ Value = $t; LoadTime = [datetime]::now }
-					}
-				} catch { <# Do nothing for now #> }
-				$template = $Cache[$templatePath].Value
-			} else {
-				Write-Debug "Not in cache, loading..."
-				$template = [System.IO.File]::ReadAllText($templatePath)
-				$Cache[$templatePath] = @{ Value = $template; LoadTime = [datetime]::now }
-			}
-		}
+            if ($Cache.ContainsKey($templatePath)) {
+                Write-Debug "Found path in cache..."
+                try {
+                    $item = Get-Item $TemplatePath
+                    if ($item.LastWriteTime.Ticks -gt $Cache[$templatePath].LoadTime.Ticks) {
+                        Write-Debug "Cache is out-of-date, reloading..."
+                        $t = [System.IO.File]::ReadAllText($templatePath)
+                        $Cache[$templatePath] = @{ Value = $t; LoadTime = [datetime]::now }
+                    }
+                } catch { <# Do nothing for now #> }
+                $template = $Cache[$templatePath].Value
+            } else {
+                Write-Debug "Not in cache, loading..."
+                $template = [System.IO.File]::ReadAllText($templatePath)
+                $Cache[$templatePath] = @{ Value = $template; LoadTime = [datetime]::now }
+            }
+        }
 
-		TemplateString {
-			$template = $TemplateString
-		}
-	}
+        TemplateString {
+            $template = $TemplateString
+        }
+    }
 
     # Move Cache out of the of possible user-space values.
     $__RenderCache = $Cache
     Remove-Variable "Cache"
 
-	# Defining TemplateDir here to make it accessible when evaluating scriptblocks.
+    # Defining TemplateDir here to make it accessible when evaluating scriptblocks.
     $TemplateDir = switch ($PSCmdlet.ParameterSetName) {
-		TemplatePath {
-			$templatePath | Split-Path -Parent
-		}
-		TemplateString {
-			# Using a template string, so use current working directory:
-			$pwd.Path
-		}
-	}
+        TemplatePath {
+            $templatePath | Split-Path -Parent
+        }
+        TemplateString {
+            # Using a template string, so use current working directory:
+            $pwd.Path
+        }
+    }
     
-	# Get the digest of the template string:
-	$__digest__ = switch ($PSCmdlet.ParameterSetName) {
-		TemplatePath {
-			# Using a template file, check if we already have a digest in the cache:
-			if (!$__RenderCache[$templatePath].ContainsKey("Digest")) {
-				_buildTemplateDigest $template $StartTag $EndTag $__RenderCache[$templatePath]
-			}
+    # Get the digest of the template string:
+    $__digest__ = switch ($PSCmdlet.ParameterSetName) {
+        TemplatePath {
+            # Using a template file, check if we already have a digest in the cache:
+            if (!$__RenderCache[$templatePath].ContainsKey("Digest")) {
+                _buildTemplateDigest $template $StartTag $EndTag $__RenderCache[$templatePath]
+            }
 
-			$__RenderCache[$templatePath].Digest
-		}
-		TemplateString {
-			# Using a template string, don't add it to the cache:
-			$c = @{}
-			_buildTemplateDigest $template $StartTag $EndTag $c
-			$c.Digest
-		}
-	}
-	
-	# Expand values into user-space to make them more accessible during render.
+            $__RenderCache[$templatePath].Digest
+        }
+        TemplateString {
+            # Using a template string, don't add it to the cache:
+            $c = @{}
+            _buildTemplateDigest $template $StartTag $EndTag $c
+            $c.Digest
+        }
+    }
+    
+    # Expand values into user-space to make them more accessible during render.
     $values.GetEnumerator() | ForEach-Object {
         New-Variable $_.Name $_.Value
     }
-	
-	Write-Debug "Starting Render..."
-	$__parts__ = $__digest__ | ForEach-Object {
-		$__part__ = $_
-		switch ($__part__.GetType()) {
-			"hashtable" {
-				if ($__part__.path) {
-					Write-Debug "Including path..." 
-					$__c__ = Render-Template $__part__.path $Values
+    
+    Write-Debug "Starting Render..."
+    $__parts__ = $__digest__ | ForEach-Object {
+        $__part__ = $_
+        switch ($__part__.GetType()) {
+            "hashtable" {
+                if ($__part__.path) {
+                    Write-Debug "Including path..." 
+                    $__c__ = Render-Template $__part__.path $Values
 
-					if ($__part__.path -like "*.ps1") {
-						$__s__ = [scriptblock]::create($__c__)
-						try {
-							$__s__.Invoke()
-						} catch {
-							$msg = "An unexpected exception occurred while Invoking '{0}' as part of '{1}'." -f $__part__.path, $templatePath
-							$e = New-Object System.Exception $msg, $_.Exception
+                    if ($__part__.path -like "*.ps1") {
+                        $__s__ = [scriptblock]::create($__c__)
+                        try {
+                            $__s__.Invoke()
+                        } catch {
+                            $msg = "An unexpected exception occurred while Invoking '{0}'." -f $__part__.path
+                            $e = New-Object System.Exception $msg, $_.Exception
 
-							throw $e
-						}
-					} else {
-						$__c__
-					}
-				}
-			}
+                            throw $e
+                        }
+                    } else {
+                        $__c__
+                    }
+                }
+            }
 
-			"scriptblock" {
-				try {
-					$__part__.invoke()
-				} catch {
-					$msg = "An unexpected exception occurred while rendering an expression in '{0}': {1}" -f $templatePath, $__part__
-					$e = New-Object System.Exception $msg, $_.Exception
+            "scriptblock" {
+                try {
+                    $__part__.invoke()
+                } catch {
+                    $msg = "An unexpected exception occurred while rendering an expression: '{0}'." -f $__part__
+                    $e = New-Object System.Exception $msg, $_.Exception
 
-					throw $e
-				}
-			}
+                    throw $e
+                }
+            }
 
-			default {
-				$__part__
-			}
-		}
-	}
+            default {
+                $__part__
+            }
+        }
+    }
 
-	$script:__InterpolationTags = $script:__InterpolationTagsHistory.Pop()
-	
-	$__parts__ -join ""
+    $script:__InterpolationTags = $script:__InterpolationTagsHistory.Pop()
+    
+    $__parts__ -join ""
 
-	
+    
 }
