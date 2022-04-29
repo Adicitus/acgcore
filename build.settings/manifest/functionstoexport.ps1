@@ -2,7 +2,7 @@
     # Core
     'Read-ConfigFile'
     'RegexPatterns'
-    'Render-Template'
+    'Format-Template'
     'Run-Operation'
     'Test-Condition'
     'Wait-Condition'

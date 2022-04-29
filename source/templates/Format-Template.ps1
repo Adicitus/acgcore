@@ -23,10 +23,10 @@ The $values variable itself is available as well.
 .PARAMETER Cache
 A hashtable used to cache the results of loading template files.
 
-Passing this parameter allows you to retain the cache between calls to Render-Template,
-otherwise a new hashtable will be generated for each call to Render-Template.
+Passing this parameter allows you to retain the cache between calls to Format-Template,
+otherwise a new hashtable will be generated for each call to Format-Template.
 
-Recursive calls to Render-Template will attempt to reuse the same cache object.
+Recursive calls to Format-Template will attempt to reuse the same cache object.
 
 During rendering the cache is available as '$__RenderCache'.
 
@@ -63,7 +63,7 @@ Running:
         Title  = "A tale of two cities"
         Chapter1 = "The Period"
     }
-    Render-Template .\page.template.html $details
+    Format-Template .\page.template.html $details
 
 Will yield:
     <h1>A tale of two cities</h1>
@@ -85,7 +85,7 @@ a file included using a <<()>> expression.
 Alternatively, you can use the the EndTag parameter top provide another acceptable end tag (e.g. '!>>').
 
 #>
-function Render-Template{
+function Format-Template{
     [CmdletBinding()]    
     param(
         [parameter(
@@ -239,7 +239,7 @@ function Render-Template{
             "hashtable" {
                 if ($__part__.path) {
                     Write-Debug "Including path..." 
-                    $__c__ = Render-Template $__part__.path $Values
+                    $__c__ = Format-Template $__part__.path $Values
 
                     if ($__part__.path -like "*.ps1") {
                         $__s__ = [scriptblock]::create($__c__)
