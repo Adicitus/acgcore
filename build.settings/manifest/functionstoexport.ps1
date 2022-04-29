@@ -8,7 +8,6 @@
     'Wait-Condition'
     'Write-ConfigFile'
     'Reset-Module'
-    'New-RandomString'
     'New-Shortcut'
     'Get-ACGCoreRegexPattern'
     'Get-ACGCoreRegexPatternNames'
@@ -33,6 +32,9 @@
     'Set-RegValue'
     'Steal-RegKey'
     #Strings
+    'ConvertTo-Base64String'
     'ConvertTo-UnicodeEscapedString'
+    'ConvertFrom-Base64String'
     'ConvertFrom-UnicodeEscapedString'
+    'New-RandomString'
 )
