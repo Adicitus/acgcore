@@ -86,7 +86,7 @@ Alternatively, you can use the the EndTag parameter top provide another acceptab
 
 #>
 function Format-Template{
-    [CmdletBinding()]    
+    [CmdletBinding(DefaultParameterSetName="TemplatePath")]    
     param(
         [parameter(
             Mandatory=$true,
@@ -99,16 +99,18 @@ function Format-Template{
             Mandatory=$true,
             Position=1,
             ParameterSetName="TemplateString",
-            HelpMessage="Path to the template file that should be rendered. Available when rendering."
+            HelpMessage="Template string to render."
         )]
         [String]$TemplateString,
         [parameter(
             Mandatory=$true,
+            Position=2,
             HelpMessage="Hashtable with values used when interpolating expressions in the template. Available when rendering."
         )]
-        [hashtable]$values,
+        [hashtable]$Values,
         [Parameter(
             Mandatory=$false,
+            Position=3,
             HelpMessage='Optional Hashtable used to cache the content of files once they are loaded. Pass in a hashtable to retain cache between calls. Available as $__RenderCache when rendering.'
         )]
         [hashtable]$Cache = $null,
@@ -239,7 +241,7 @@ function Format-Template{
             "hashtable" {
                 if ($__part__.path) {
                     Write-Debug "Including path..." 
-                    $__c__ = Format-Template $__part__.path $Values
+                    $__c__ = Format-Template -TemplatePath $__part__.path -Values $Values
 
                     if ($__part__.path -like "*.ps1") {
                         $__s__ = [scriptblock]::create($__c__)
