@@ -46,7 +46,7 @@ function Set-WinAutoLogon {
 
     $tmpFile = [System.IO.Path]::GetTempFileName()
 
-    Rendter-Template $templatePath $values > $tmpFile
+    Format-Template -TemplatePath $templatePath -Values $values > $tmpFile
 
     reg import $tmpFile
     Remove-Item $tmpFile
