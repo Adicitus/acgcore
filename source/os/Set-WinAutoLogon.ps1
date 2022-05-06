@@ -42,7 +42,7 @@ function Set-WinAutoLogon {
 
     }
     
-    $valeus.AutoLogonLimit = $AutoLogonLimit
+    $values.AutoLogonLimit = $AutoLogonLimit
 
     $tmpFile = [System.IO.Path]::GetTempFileName()
 

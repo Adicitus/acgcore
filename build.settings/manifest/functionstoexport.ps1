@@ -31,6 +31,7 @@
     'Set-ProcessPrivilege'
     'Set-RegValue'
     'Steal-RegKey'
+    'Set-WinAutoLogon'
     #Strings
     'ConvertTo-Base64String'
     'ConvertTo-UnicodeEscapedString'
