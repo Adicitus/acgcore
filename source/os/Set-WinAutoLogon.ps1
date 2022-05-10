@@ -15,7 +15,7 @@ function Set-WinAutoLogon {
         [int]$AutoLogonLimit=100000
     )
 
-    $templatePath = "$PSScripRoot\.assets\templates\winlogon.tmplt.reg"
+    $templatePath = "$PSScriptRoot\.assets\templates\winlogon.tmplt.reg"
     $Values = $null
 
     switch ($PSCmdlet.ParameterSetName) {
