@@ -179,14 +179,14 @@ function Format-Template{
                     $item = Get-Item $TemplatePath
                     if ($item.LastWriteTime.Ticks -gt $Cache[$templatePath].LoadTime.Ticks) {
                         Write-Debug "Cache is out-of-date, reloading..."
-                        $t = [System.IO.File]::ReadAllText($templatePath)
+                        $t = Get-Content -Path $templatePath -Raw
                         $Cache[$templatePath] = @{ Value = $t; LoadTime = [datetime]::now }
                     }
                 } catch { <# Do nothing for now #> }
                 $template = $Cache[$templatePath].Value
             } else {
                 Write-Debug "Not in cache, loading..."
-                $template = [System.IO.File]::ReadAllText($templatePath)
+                $template = Get-Content -Path $templatePath -Raw
                 $Cache[$templatePath] = @{ Value = $template; LoadTime = [datetime]::now }
             }
         }
