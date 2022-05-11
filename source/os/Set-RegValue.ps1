@@ -10,10 +10,10 @@
     }
     switch($type) {
         "REG_SZ" {
-            { reg add $key /f /v $name /t $type /d "$value" } | Run-Operation
+            { reg add $key /f /v $name /t $type /d "$value" } | Invoke-ShoutOut
         }
         default {
-            { reg add $key /f /v $name /t $type /d $value } | Run-Operation
+            { reg add $key /f /v $name /t $type /d $value } | Invoke-ShoutOut
         }
     }
 }

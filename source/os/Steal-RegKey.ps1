@@ -54,7 +54,7 @@ function Steal-RegKey {
         $RegKey,
         [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree,
         [System.Security.AccessControl.RegistryRights]::takeownership
-    ) } |Run-Operation
+    ) } | Invoke-ShoutOut
 
     if (!$key) {
         shoutOut "Unable to find '$OriginalRegKey'" Red
@@ -62,16 +62,16 @@ function Steal-RegKey {
     }
 
     # You must get a blank acl for the key b/c you do not currently have access
-    $acl = { $key.GetAccessControl([System.Security.AccessControl.AccessControlSections]::None) } | Run-Operation
+    $acl = { $key.GetAccessControl([System.Security.AccessControl.AccessControlSections]::None) } | Invoke-ShoutOut
     $me = [System.Security.Principal.NTAccount]$user
     $acl.SetOwner($me)
-    { $key.SetAccessControl($acl) } | Run-Operation | Out-Null
+    { $key.SetAccessControl($acl) } | Invoke-ShoutOut | Out-Null
 
     # After you have set owner you need to get the acl with the perms so you can modify it.
-    $acl = { $key.GetAccessControl() } | Run-Operation
+    $acl = { $key.GetAccessControl() } | Invoke-ShoutOut
     $rule = New-Object System.Security.AccessControl.RegistryAccessRule ("BuiltIn\Administrators","FullControl","Allow")
-    { $acl.SetAccessRule($rule) } | Run-Operation | Out-Null
-    { $key.SetAccessControl($acl) } | Run-Operation | Out-Null
+    { $acl.SetAccessRule($rule) } | Invoke-ShoutOut | Out-Null
+    { $key.SetAccessControl($acl) } | Invoke-ShoutOut | Out-Null
 
     $key.Close()
     shoutOut "Done!" Green
