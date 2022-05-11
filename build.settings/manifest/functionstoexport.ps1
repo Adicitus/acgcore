@@ -25,11 +25,11 @@
     'ConvertTo-PSCredential'
     # OS
     'Add-LogonOp'
-    'Query-RegValue'
+    'Get-RegValue'
     'Remove-LogonOp'
     'Set-ProcessPrivilege'
     'Set-RegValue'
-    'Steal-RegKey'
+    'Set-RegKeyOwner'
     'Set-WinAutoLogon'
     #Strings
     'ConvertTo-Base64String'

@@ -13,11 +13,15 @@ $script:__InterpolationTagsHistory = New-Object System.Collections.Stack
 
 
 # Creating aliases:
-New-Alias -Name 'Save-Credential' -Value 'Save-PSCredential'
-New-Alias -Name 'Load-Credential' -Value 'Restore-PSCredential'
-New-Alias -Name 'Load-PSCredential' -Value 'Restore-PSCredential'
 New-Alias -Name '~' -Value Unlock-SecureString
-New-Alias -Name 'Parse-ConfigFile' -Value 'Read-ConfigFile'
-New-Alias -Name 'Create-Shortcut' -Value 'New-Shortcut'
-New-Alias -Name 'Render-Template' -Value 'Format-Template'
-New-Alias -Name 'Run-Operation' -Value 'Invoke-ShoutOut'
+
+# Backwards-compatibility aliases:
+New-Alias -Name 'Save-Credential'   -Value 'Save-PSCredential'
+New-Alias -Name 'Load-Credential'   -Value 'Restore-PSCredential'
+New-Alias -Name 'Load-PSCredential' -Value 'Restore-PSCredential'
+New-Alias -Name 'Parse-ConfigFile'  -Value 'Read-ConfigFile'
+New-Alias -Name 'Create-Shortcut'   -Value 'New-Shortcut'
+New-Alias -Name 'Render-Template'   -Value 'Format-Template'
+New-Alias -Name 'Run-Operation'     -Value 'Invoke-ShoutOut'
+New-Alias -Name 'Query-RegValue'    -Value 'Get-RegValue'
+New-Alias -NAme 'Steal-RegKey'      -Value 'Set-RegKeyOwner'

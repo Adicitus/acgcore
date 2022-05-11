@@ -13,7 +13,7 @@
 .PARAMETER User
     The name of the user that should become the owner of the given registry key.
 #>
-function Steal-RegKey {
+function Set-RegKeyOwner {
     param(
         [parameter(Mandatory=$true,  Position=1)][String]$RegKey,
         [parameter(Mandatory=$false, position=2)][String]$User=[System.Security.Principal.WindowsIdentity]::GetCurrent().Name

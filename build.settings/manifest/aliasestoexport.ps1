@@ -1,10 +1,12 @@
 @(
+    "~"
     "Save-Credential"
     "Load-Credential"
     "Load-PSCredential"
-    "~"
     "Parse-ConfigFile"
     "Create-Shortcut"
     "Render-Template"
     'Run-Operation'
+    "Query-RegValue"
+    "Steal-RegKey"
 )
