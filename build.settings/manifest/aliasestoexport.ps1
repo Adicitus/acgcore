@@ -6,4 +6,5 @@
     "Parse-ConfigFile"
     "Create-Shortcut"
     "Render-Template"
+    'Run-Operation'
 )

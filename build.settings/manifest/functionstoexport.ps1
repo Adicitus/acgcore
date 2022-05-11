@@ -3,7 +3,6 @@
     'Read-ConfigFile'
     'RegexPatterns'
     'Format-Template'
-    'Run-Operation'
     'Test-Condition'
     'Wait-Condition'
     'Write-ConfigFile'

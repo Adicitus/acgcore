@@ -20,3 +20,4 @@ New-Alias -Name '~' -Value Unlock-SecureString
 New-Alias -Name 'Parse-ConfigFile' -Value 'Read-ConfigFile'
 New-Alias -Name 'Create-Shortcut' -Value 'New-Shortcut'
 New-Alias -Name 'Render-Template' -Value 'Format-Template'
+New-Alias -Name 'Run-Operation' -Value 'Invoke-ShoutOut'
