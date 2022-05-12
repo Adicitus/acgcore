@@ -1,5 +1,5 @@
 ﻿# Utility to acquire registry values using reg.exe (uses Invoke-ShoutOut)
-function Set-RegValue($key, $name){
+function Get-RegValue($key, $name){
     $regValueQVregex = "\s+{0}\s+(?<type>REG_[A-Z]+)\s+(?<value>.*)"
     { reg query $key /v $name } | Invoke-ShoutOut | Where-Object { 
         $_ -match ($regValueQVregex -f $name)
