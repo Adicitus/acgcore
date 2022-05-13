@@ -96,6 +96,12 @@ function Format-Template{
         )]
         [String]$TemplatePath,
         [parameter(
+            Mandatory=$false,
+            ParameterSetName="TemplatePath",
+            HelpMessage="Character Encoding of the template file (defaults to UTF8)."
+        )]
+        [Microsoft.PowerShell.Commands.FileSystemCmdletProviderEncoding]$TemplateEncoding = [Microsoft.PowerShell.Commands.FileSystemCmdletProviderEncoding]::UTF8,
+        [parameter(
             Mandatory=$true,
             Position=1,
             ParameterSetName="TemplateString",
@@ -179,14 +185,14 @@ function Format-Template{
                     $item = Get-Item $TemplatePath
                     if ($item.LastWriteTime.Ticks -gt $Cache[$templatePath].LoadTime.Ticks) {
                         Write-Debug "Cache is out-of-date, reloading..."
-                        $t = Get-Content -Path $templatePath -Raw
+                        $t = Get-Content -Path $templatePath -Raw -Encoding $TemplateEncoding
                         $Cache[$templatePath] = @{ Value = $t; LoadTime = [datetime]::now }
                     }
                 } catch { <# Do nothing for now #> }
                 $template = $Cache[$templatePath].Value
             } else {
                 Write-Debug "Not in cache, loading..."
-                $template = Get-Content -Path $templatePath -Raw
+                $template = Get-Content -Path $templatePath -Raw -Encoding $TemplateEncoding
                 $Cache[$templatePath] = @{ Value = $template; LoadTime = [datetime]::now }
             }
         }
