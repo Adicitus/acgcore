@@ -25,8 +25,11 @@
     'ConvertTo-PSCredential'
     # OS
     'Add-LogonOp'
+    'Add-EnvironmentPath'
     'Get-RegValue'
+    'Get-EnvironmentPaths'
     'Remove-LogonOp'
+    'Remove-EnvironmentPath'
     'Set-ProcessPrivilege'
     'Set-RegValue'
     'Set-RegKeyOwner'
