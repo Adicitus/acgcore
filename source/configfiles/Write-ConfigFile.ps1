@@ -34,8 +34,7 @@ function Write-ConfigFile {
         if (!(test-path $Path)) {
             new-item -itemtype file -force -Path $Path | out-null
         }
-        [System.IO.File]::WriteAllLines($Path, $output, [System.Text.Encoding]::UTF8)
-        #$output | out-file -force -filepath $Path 
+        Set-Content -Path $Path -Value  $output -Encoding  [System.Text.Encoding]::UTF8
     }
     else {
         $output

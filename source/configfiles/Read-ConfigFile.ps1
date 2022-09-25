@@ -188,14 +188,14 @@ function Read-ConfigFile {
     switch ($PSCmdlet.ParameterSetName) {
     
         "File" {
-            if( $Path -and ([System.IO.File]::Exists($Path)) ) {
-                $lines = [System.IO.File]::ReadAllLines($Path, [System.Text.Encoding]::UTF8)
+            if( $Path -and (Test-Path -Path $Path -PathType Leaf) ) {
+                $lines = Get-Content -Path $Path -Encoding UTF8
             } else {
                 . $handleError -Message "<InvalidPath>The given path doesn't lead to an existing file: '$Path'"
                 return
             }
 
-            $currentDir = [System.IO.Directory]::GetParent($Path)
+            $currentDir = Split-Path -Parent $Path
 
         }
 
