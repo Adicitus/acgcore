@@ -40,7 +40,9 @@ Function Import-SecureString {
         })]
         [Alias('Key')]
         [string] $DPAPIKey,
-        [Parameter(Mandatory=$true, ParameterSetName='x509.managed', HelpMessage='Thumbprint of the certificate that should be used to encrypt the resulting string. Warning: you will need the corresponding private key to decrypt the string.')]
+        [Parameter(Mandatory=$true, ParameterSetName='x509.unmanaged', HelpMessage='Certificate that should be used to encrypt the resulting string. Warning: the certificate object must include the corresponding private key.')]
+        [System.Security.Cryptography.X509Certificates.X509Certificate] $Certificate,
+        [Parameter(Mandatory=$true, ParameterSetName='x509.managed', HelpMessage='Thumbprint of the certificate that should be used to decrypt the resulting string. Warning: you will need the corresponding private key.')]
         [string] $Thumbprint,
         [Parameter(Mandatory=$true, ParameterSetName='plain', HelpMessage='Disable encryption, causing the plain text be base64 encoded.')]
         [switch] $NoEncryption
@@ -56,11 +58,21 @@ Function Import-SecureString {
             return ConvertTo-SecureString -String $string -Key $keyBytes
         }
 
+        x509.unmanaged {
+            try {
+                return ConvertFrom-CertificateSecuredString -CertificateSecuredString $String -Certificate $Certificate
+            } catch {
+                $msg = "Failed to decrypt the string using certificat (Subject: {0}). See inner exception for details." -f $Certificate.Subject
+                $ex = New-Object System.Exception $msg, $_.Exception
+                throw $ex
+            }
+        }
+
         x509.managed {
             try {
                 return ConvertFrom-CertificateSecuredString -CertificateSecuredString $String -Thumbprint $Thumbprint
             } catch {
-                $msg = "Failed to decrypt the string using certificat (Thumbprint: {0}). See inner exception for details." -f $header.t
+                $msg = "Failed to decrypt the string using certificat (Thumbprint: {0}). See inner exception for details." -f $Thumbprint
                 $ex = New-Object System.Exception $msg, $_.Exception
                 throw $ex
             }

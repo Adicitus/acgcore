@@ -29,6 +29,8 @@ function Export-SecureString {
         })]
         [Alias('Key')]
         [string] $DPAPIKey,
+        [Parameter(Mandatory=$true, ParameterSetName='x509.unmanaged', HelpMessage='Certificate that should be used to encrypt the resulting string.')]
+        [System.Security.Cryptography.X509Certificates.X509Certificate] $Certificate,
         [Parameter(Mandatory=$true, ParameterSetName='x509.managed', HelpMessage='Thumbprint of the certificate that should be used to encrypt the resulting string. Warning: you will need the corresponding private key to decrypt the string.')]
         [string] $Thumbprint,
         [Parameter(Mandatory=$true, ParameterSetName='plain', HelpMessage='Disable encryption, causing the plain text be base64 encoded.')]
@@ -63,6 +65,10 @@ function Export-SecureString {
                 Key    = [System.Convert]::ToBase64String($convertArgs.Key)
             }
 
+        }
+
+        x509.unmanaged {
+            return convertTo-CertificateSecuredString -SecureString $SecureString -Certificate $Certificate
         }
 
         x509.managed {

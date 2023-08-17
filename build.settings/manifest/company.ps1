@@ -1,1 +1,1 @@
-"Cornerstone Group AB"
+"Adicitus Concepts Group"
